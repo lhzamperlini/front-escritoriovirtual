@@ -67,6 +67,15 @@
           </button>
         }
       }
+
+      <!-- Open Chat Drawer Toggle (US04) -->
+      <button class="btn-chat-toggle" (click)="toggleChatDrawer()" title="Abrir Chat Multicanal">
+        <span class="chat-toggle-icon">💬</span>
+        <span>Chat</span>
+        @if (chatService.totalUnread() > 0) {
+          <span class="chat-badge">{{ chatService.totalUnread() }}</span>
+        }
+      </button>
     </div>
   </header>
 
@@ -271,7 +280,34 @@
             </div>
           </div>
         }
+
+        <!-- Proximity Speech Bubbles (US01) -->
+        @for (bubble of chatService.proximityBubbles(); track bubble.id) {
+          <div 
+            class="proximity-speech-bubble"
+            [style.left.px]="bubble.x"
+            [style.top.px]="bubble.y - 42">
+            <span class="bubble-sender">{{ bubble.senderName }}:</span>
+            <span class="bubble-text">{{ bubble.text }}</span>
+          </div>
+        }
       </div>
+    </div>
+
+    <!-- Floating Proximity Chat Bar (US01) -->
+    <div class="proximity-chat-bar">
+      <span class="proximity-bar-icon">🗣️</span>
+      <input 
+        type="text" 
+        [(ngModel)]="proximityInput" 
+        (keydown.enter)="sendProximityChatMessage()" 
+        placeholder="Falar por proximidade no mapa (Enter)..." />
+      <button 
+        class="btn-send-prox" 
+        [disabled]="!proximityInput.trim()" 
+        (click)="sendProximityChatMessage()">
+        Falar
+      </button>
     </div>
   </main>
 
@@ -301,4 +337,7 @@
       </div>
     </div>
   }
+
+  <!-- Multichannel Chat Drawer (US02, US03, US04) -->
+  <app-chat-drawer />
 </div>

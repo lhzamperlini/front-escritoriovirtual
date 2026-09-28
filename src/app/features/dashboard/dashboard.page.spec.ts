@@ -9,6 +9,7 @@ import { signal } from '@angular/core';
 import { UserProfile } from '../../core/auth/user-profile.model';
 import { WorkspaceDto, WorkspaceRole } from '../../core/workspace/workspace.model';
 import { MapService } from '../maps/map.service';
+import { ChatService } from '../chat/chat.service';
 
 describe('DashboardPage', () => {
   let component: DashboardPage;
@@ -81,6 +82,26 @@ describe('DashboardPage', () => {
       toggleEditMode: () => {}
     };
 
+    const mockChatService = {
+      isDrawerOpen: signal(false),
+      channels: signal([]),
+      activeChannelId: signal(null),
+      activeMessages: signal([]),
+      unreadCounts: signal({}),
+      proximityBubbles: signal([]),
+      activeChannel: signal(null),
+      totalUnread: signal(0),
+      loadChannels: () => of([]),
+      selectChannel: () => of([]),
+      sendMessage: () => of(null),
+      sendProximity: () => Promise.resolve(),
+      openDirectChat: () => of(null),
+      joinZoneChat: () => of(null),
+      toggleDrawer: () => {},
+      openDrawer: () => {},
+      closeDrawer: () => {}
+    };
+
     await TestBed.configureTestingModule({
       imports: [DashboardPage],
       providers: [
@@ -88,6 +109,7 @@ describe('DashboardPage', () => {
         { provide: WorkspacesService, useValue: workspacesServiceMock },
         { provide: WorkspaceContextService, useValue: workspaceContextMock },
         { provide: MapService, useValue: mockMapService },
+        { provide: ChatService, useValue: mockChatService },
         { provide: Router, useValue: routerMock }
       ]
     }).compileComponents();

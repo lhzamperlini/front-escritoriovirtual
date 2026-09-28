@@ -1,9 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
+import { of } from 'rxjs';
 import { MapCanvasComponent } from './map-canvas.component';
 import { MapService } from '../map.service';
 import { WorkspaceContextService } from '../../../core/workspace/workspace-context.service';
+import { ChatService } from '../../chat/chat.service';
 import { FURNITURE_CATALOG } from '../map.model';
 
 describe('MapCanvasComponent', () => {
@@ -12,11 +15,32 @@ describe('MapCanvasComponent', () => {
   let mapService: MapService;
 
   beforeEach(async () => {
+    const mockChatService = {
+      isDrawerOpen: signal(false),
+      channels: signal([]),
+      activeChannelId: signal(null),
+      activeMessages: signal([]),
+      unreadCounts: signal({}),
+      proximityBubbles: signal([]),
+      activeChannel: signal(null),
+      totalUnread: signal(0),
+      loadChannels: () => of([]),
+      selectChannel: () => of([]),
+      sendMessage: () => of(null),
+      sendProximity: () => Promise.resolve(),
+      openDirectChat: () => of(null),
+      joinZoneChat: () => of(null),
+      toggleDrawer: () => {},
+      openDrawer: () => {},
+      closeDrawer: () => {}
+    };
+
     await TestBed.configureTestingModule({
       imports: [MapCanvasComponent],
       providers: [
         MapService,
         WorkspaceContextService,
+        { provide: ChatService, useValue: mockChatService },
         provideHttpClient(),
         provideHttpClientTesting()
       ]

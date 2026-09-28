@@ -6,13 +6,15 @@ import { MapData, MapObject, MapZone, ZoneType, FURNITURE_CATALOG, FurnitureCata
 import { WorkspaceContextService } from '../../../core/workspace/workspace-context.service';
 import { PresenceService, PresenceState } from '../../../core/presence/presence.service';
 import { AuthService } from '../../../core/auth/auth.service';
+import { ChatService } from '../../chat/chat.service';
+import { ChatDrawerComponent } from '../../chat/chat-drawer/chat-drawer.component';
 
 type EditorTool = 'select' | 'place_furniture' | 'draw_zone' | 'erase';
 
 @Component({
   selector: 'app-map-canvas',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ChatDrawerComponent],
   templateUrl: './map-canvas.component.html',
   styleUrls: ['./map-canvas.component.scss']
 })
@@ -21,6 +23,7 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
   protected readonly workspaceContext = inject(WorkspaceContextService);
   public readonly presenceService = inject(PresenceService);
   protected readonly authService = inject(AuthService);
+  public readonly chatService = inject(ChatService);
 
   @ViewChild('viewport', { static: true }) viewportRef!: ElementRef<HTMLDivElement>;
 
@@ -360,5 +363,32 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
 
     this.presenceService.moveStart(direction);
     this.presenceService.moveStop(nextX, nextY, nextGridX, nextGridY);
+
+    // Auto-detect zone entry for contextual zone chat (US02)
+    const enteredZone = this.draftZones().find(
+      z => nextGridX >= z.startX && nextGridX < z.endX && nextGridY >= z.startY && nextGridY < z.endY
+    );
+    if (enteredZone && (enteredZone as any).id) {
+      const ws = this.workspaceContext.currentWorkspace();
+      if (ws) {
+        this.chatService.joinZoneChat(ws.id, (enteredZone as any).id, enteredZone.name).subscribe();
+      }
+    }
+  }
+
+  public proximityInput = '';
+
+  public sendProximityChatMessage(): void {
+    const text = this.proximityInput.trim();
+    const map = this.currentMap();
+    const my = this.presenceService.myPresence();
+    if (!text || !map || !my) return;
+
+    this.chatService.sendProximity(map.id, text, my.x, my.y);
+    this.proximityInput = '';
+  }
+
+  public toggleChatDrawer(): void {
+    this.chatService.toggleDrawer();
   }
 }
