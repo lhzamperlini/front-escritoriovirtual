@@ -1,0 +1,279 @@
+<div class="lobby-container">
+  <!-- Decorative Background Glows -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+
+  <!-- Top Navigation Header -->
+  <header class="lobby-header">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <span class="brand-title">Escritório Virtual</span>
+        <span class="brand-tag">Multi-Tenant Platform</span>
+      </div>
+    </div>
+
+    <div class="user-meta">
+      @if (authService.currentUser(); as user) {
+        <div class="user-chip">
+          <div class="user-avatar">{{ user.name ? user.name[0].toUpperCase() : 'U' }}</div>
+          <div class="user-details">
+            <span class="user-name">{{ user.name }}</span>
+            <span class="user-email">{{ user.email }}</span>
+          </div>
+        </div>
+      }
+      <button class="btn-logout" (click)="logout()" title="Sair da conta">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        <span>Sair</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="lobby-main">
+    <section class="hero-section">
+      <div class="badge-pill">
+        <span class="pulse-dot"></span>
+        <span>Lobby de Acesso</span>
+      </div>
+      <h1 class="hero-title">Selecione seu Workspace</h1>
+      <p class="hero-description">
+        Alterne entre as organizações que você participa ou crie um novo espaço para sua empresa.
+      </p>
+
+      <div class="toolbar-actions">
+        <div class="search-box">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            type="text"
+            placeholder="Buscar workspace por nome ou slug..."
+            [ngModel]="searchTerm()"
+            (ngModelChange)="searchTerm.set($event)"
+          />
+        </div>
+
+        <div class="button-group">
+          <button class="btn-secondary" (click)="openJoinModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+            </svg>
+            <span>Entrar via Convite</span>
+          </button>
+
+          <button class="btn-primary" (click)="openCreateModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            <span>Criar Workspace</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Workspaces Grid or Empty States -->
+    @if (isLoading()) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Carregando seus workspaces...</p>
+      </div>
+    } @else if (filteredWorkspaces().length > 0) {
+      <div class="workspaces-grid">
+        @for (item of filteredWorkspaces(); track item.id) {
+          <article class="workspace-card" (click)="selectWorkspace(item)">
+            <div class="card-glow"></div>
+            <div class="card-header">
+              <div class="workspace-avatar">
+                {{ item.name[0].toUpperCase() }}
+              </div>
+              <div class="role-badge" [attr.data-role]="item.userRole">
+                @switch (item.userRole) {
+                  @case (1) { <span>👑 Proprietário</span> }
+                  @case (2) { <span>🛡️ Administrador</span> }
+                  @case (3) { <span>👤 Membro</span> }
+                  @case (4) { <span>🏷️ Convidado</span> }
+                  @default { <span>Membro</span> }
+                }
+              </div>
+            </div>
+
+            <div class="card-body">
+              <h3 class="workspace-name">{{ item.name }}</h3>
+              <p class="workspace-slug">org/{{ item.slug }}</p>
+            </div>
+
+            <div class="card-footer">
+              <div class="members-info">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                <span>{{ item.membersCount }} {{ item.membersCount === 1 ? 'membro' : 'membros' }}</span>
+              </div>
+
+              <div class="action-arrow">
+                <span>Acessar</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                  <polyline points="12 5 19 12 12 19"/>
+                </svg>
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    } @else {
+      <div class="empty-state">
+        <div class="empty-icon-wrapper">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+          </svg>
+        </div>
+        <h3>Nenhum Workspace Encontrado</h3>
+        <p>Você ainda não está associado a nenhum espaço de trabalho ou a busca não retornou resultados.</p>
+        <div class="empty-actions">
+          <button class="btn-primary" (click)="openCreateModal()">
+            <span>Criar Minha Empresa</span>
+          </button>
+          <button class="btn-secondary" (click)="openJoinModal()">
+            <span>Inserir Convite</span>
+          </button>
+        </div>
+      </div>
+    }
+  </main>
+
+  <!-- Create Workspace Modal -->
+  @if (isCreateModalOpen()) {
+    <div class="modal-backdrop" (click)="closeCreateModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <h2 class="modal-title">Novo Workspace</h2>
+            <p class="modal-subtitle">Crie um espaço dedicado e convide sua equipe</p>
+          </div>
+          <button class="btn-close" (click)="closeCreateModal()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          @if (formError()) {
+            <div class="alert-error">
+              <span>{{ formError() }}</span>
+            </div>
+          }
+
+          <div class="form-group">
+            <label for="ws-name">Nome da Empresa / Organização</label>
+            <input
+              id="ws-name"
+              type="text"
+              placeholder="Ex: Minha Empresa Inc"
+              [(ngModel)]="newWorkspaceName"
+              (ngModelChange)="onNameChange()"
+              maxlength="255"
+              autofocus
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="ws-slug">Slug de Acesso (URL amigável)</label>
+            <div class="input-prefix-wrapper">
+              <span class="prefix">app/org/</span>
+              <input
+                id="ws-slug"
+                type="text"
+                placeholder="minha-empresa"
+                [(ngModel)]="newWorkspaceSlug"
+                maxlength="100"
+              />
+            </div>
+            <span class="helper-text">Será usado no link amigável do seu escritório virtual.</span>
+          </div>
+
+          <div class="info-callout">
+            <span class="icon">💡</span>
+            <div class="text">
+              <strong>100% Gratuito:</strong> Ao criar o Workspace, você se torna o <strong>Owner</strong> e terá acesso irrestrito para convidar membros e gerenciar mapas.
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-secondary" (click)="closeCreateModal()" [disabled]="isSubmitting()">Cancelar</button>
+          <button class="btn-primary" (click)="submitCreateWorkspace()" [disabled]="isSubmitting()">
+            @if (isSubmitting()) {
+              <div class="btn-spinner"></div>
+              <span>Criando...</span>
+            } @else {
+              <span>Criar Espaço</span>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Join via Invite Modal -->
+  @if (isJoinModalOpen()) {
+    <div class="modal-backdrop" (click)="closeJoinModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <h2 class="modal-title">Entrar em um Workspace</h2>
+            <p class="modal-subtitle">Insira o código de convite enviado pelo administrador</p>
+          </div>
+          <button class="btn-close" (click)="closeJoinModal()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          @if (formError()) {
+            <div class="alert-error">
+              <span>{{ formError() }}</span>
+            </div>
+          }
+
+          <div class="form-group">
+            <label for="invite-code">Código de Convite</label>
+            <input
+              id="invite-code"
+              type="text"
+              placeholder="Cole aqui o código ou token do convite"
+              [(ngModel)]="inviteCode"
+              autofocus
+            />
+            <span class="helper-text">Exemplo: WKS-7A9B2C ou código recebido por link.</span>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-secondary" (click)="closeJoinModal()" [disabled]="isSubmitting()">Cancelar</button>
+          <button class="btn-primary" (click)="submitJoinWorkspace()" [disabled]="isSubmitting()">
+            @if (isSubmitting()) {
+              <div class="btn-spinner"></div>
+              <span>Entrando...</span>
+            } @else {
+              <span>Confirmar e Entrar</span>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

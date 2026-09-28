@@ -1,0 +1,67 @@
+<div class="invite-container">
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+
+  <main class="invite-card">
+    @if (isLoading()) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Verificando convite...</p>
+      </div>
+    } @else if (inviteDetails() && inviteDetails()!.isValid) {
+      <div class="invite-badge">
+        <span class="icon">✉️</span>
+        <span>Convite Oficial</span>
+      </div>
+
+      <h1 class="invite-title">Você foi convidado!</h1>
+      <p class="invite-intro">
+        <strong>{{ inviteDetails()!.inviterName }}</strong> convidou você para se juntar ao Workspace:
+      </p>
+
+      <div class="workspace-preview-box">
+        <div class="ws-icon">
+          {{ inviteDetails()!.workspaceName[0].toUpperCase() }}
+        </div>
+        <div class="ws-info">
+          <span class="ws-name">{{ inviteDetails()!.workspaceName }}</span>
+          <span class="ws-slug">app/org/{{ inviteDetails()!.workspaceSlug }}</span>
+        </div>
+        <div class="ws-role">
+          Papel: {{ getRoleName(inviteDetails()!.role) }}
+        </div>
+      </div>
+
+      @if (errorMessage()) {
+        <div class="alert-error">
+          {{ errorMessage() }}
+        </div>
+      }
+
+      <div class="actions-group">
+        <button class="btn-primary" (click)="acceptInvite()" [disabled]="isJoining()">
+          @if (isJoining()) {
+            <div class="btn-spinner"></div>
+            <span>Entrando no Workspace...</span>
+          } @else {
+            <span>Aceitar Convite e Entrar</span>
+          }
+        </button>
+
+        <button class="btn-secondary" (click)="goToLobby()" [disabled]="isJoining()">
+          <span>Ir para o Lobby</span>
+        </button>
+      </div>
+    } @else {
+      <div class="error-state">
+        <div class="error-icon">✕</div>
+        <h2>Convite Indisponível</h2>
+        <p>{{ errorMessage() || 'Este link de convite é inválido ou já expirou.' }}</p>
+
+        <button class="btn-primary" (click)="goToLobby()">
+          <span>Voltar ao Lobby de Workspaces</span>
+        </button>
+      </div>
+    }
+  </main>
+</div>
