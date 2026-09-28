@@ -78,6 +78,14 @@
         </button>
       }
 
+      <button type="button" class="btn-avatar-action" (click)="openAvatarCustomizer()" title="Personalizar meu Avatar">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        <span>Meu Avatar</span>
+      </button>
+
       @if (authService.currentUser(); as user) {
         <div class="status-selector">
           <button 
@@ -329,5 +337,10 @@
         </div>
       </div>
     </div>
+  }
+
+  <!-- Avatar Customizer Modal (Requisito 03) -->
+  @if (isAvatarModalOpen()) {
+    <app-avatar-customizer [isModal]="true" (closed)="closeAvatarCustomizer()"></app-avatar-customizer>
   }
 </div>

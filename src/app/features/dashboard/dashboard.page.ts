@@ -7,12 +7,15 @@ import { WorkspaceContextService } from '../../core/workspace/workspace-context.
 import { WorkspacesService } from '../workspaces/workspaces.service';
 import { WorkspaceDto, WorkspaceRole, WorkspaceInviteDto } from '../../core/workspace/workspace.model';
 
+import { AvatarCustomizerComponent } from '../avatar/avatar-customizer.component';
+import { AvatarService } from '../avatar/avatar.service';
+
 type UserStatus = 'available' | 'focus' | 'in_meeting' | 'away';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AvatarCustomizerComponent],
   templateUrl: './dashboard.page.html',
   styleUrls: ['./dashboard.page.scss']
 })
@@ -20,7 +23,10 @@ export class DashboardPage implements OnInit {
   protected readonly authService = inject(AuthService);
   protected readonly workspaceContext = inject(WorkspaceContextService);
   protected readonly workspacesService = inject(WorkspacesService);
+  protected readonly avatarService = inject(AvatarService);
   private readonly router = inject(Router);
+
+  public readonly isAvatarModalOpen = signal<boolean>(false);
 
   protected readonly currentStatus = signal<UserStatus>('available');
   protected readonly showClaims = signal<boolean>(false);
@@ -148,6 +154,14 @@ export class DashboardPage implements OnInit {
       case WorkspaceRole.Guest: return 'Convidado';
       default: return 'Membro';
     }
+  }
+
+  public openAvatarCustomizer(): void {
+    this.isAvatarModalOpen.set(true);
+  }
+
+  public closeAvatarCustomizer(): void {
+    this.isAvatarModalOpen.set(false);
   }
 
   public logout(): void {
