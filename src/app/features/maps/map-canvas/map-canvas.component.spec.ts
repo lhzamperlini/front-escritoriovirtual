@@ -149,4 +149,83 @@ describe('MapCanvasComponent', () => {
     expect(component.presenceService.myPresence()?.gridX).toBe(2);
     expect(component.presenceService.myPresence()?.x).toBe(64);
   });
+
+  it('should block movement into locked MeetingRoom and trigger knock prompt', () => {
+    component.presenceService.currentMapId.set('map-1');
+    component.presenceService.myPresence.set({
+      userId: 'test-user',
+      mapId: 'map-1',
+      x: 32,
+      y: 32,
+      gridX: 1,
+      gridY: 1,
+      status: 'available',
+      lastHeartbeat: Date.now()
+    });
+
+    component.draftZones.set([
+      {
+        name: 'Sala Diretoria',
+        zoneType: 'MeetingRoom',
+        startX: 2,
+        startY: 1,
+        endX: 5,
+        endY: 5
+      }
+    ]);
+
+    // Lock the room
+    component.roomAccessService.lockedRooms.set(new Map([['Sala Diretoria', { isLocked: true }]]));
+
+    const keyEvent = new KeyboardEvent('keydown', { code: 'KeyD' });
+    component.onKeyDown(keyEvent);
+
+    // Movement blocked: avatar stays at gridX 1
+    expect(component.presenceService.myPresence()?.gridX).toBe(1);
+    expect(component.roomAccessService.activeKnockPrompt()?.zoneName).toBe('Sala Diretoria');
+  });
+
+  it('should allow movement into locked MeetingRoom if user is Owner/Admin', () => {
+    component.presenceService.currentMapId.set('map-1');
+    component.presenceService.myPresence.set({
+      userId: 'test-user',
+      mapId: 'map-1',
+      x: 32,
+      y: 32,
+      gridX: 1,
+      gridY: 1,
+      status: 'available',
+      lastHeartbeat: Date.now()
+    });
+
+    component.draftZones.set([
+      {
+        name: 'Sala Diretoria',
+        zoneType: 'MeetingRoom',
+        startX: 2,
+        startY: 1,
+        endX: 5,
+        endY: 5
+      }
+    ]);
+
+    // Lock the room
+    component.roomAccessService.lockedRooms.set(new Map([['Sala Diretoria', { isLocked: true }]]));
+
+    // User is Admin
+    component.workspaceContext.setWorkspace({
+      id: 'ws-1',
+      name: 'Workspace Test',
+      slug: 'ws-test',
+      userRole: 1 as any, // Owner
+      membersCount: 5,
+      createdAt: new Date().toISOString()
+    });
+
+    const keyEvent = new KeyboardEvent('keydown', { code: 'KeyD' });
+    component.onKeyDown(keyEvent);
+
+    // Master Key: avatar enters room
+    expect(component.presenceService.myPresence()?.gridX).toBe(2);
+  });
 });

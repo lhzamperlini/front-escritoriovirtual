@@ -10,6 +10,7 @@ import { ChatService } from '../../chat/chat.service';
 import { ChatDrawerComponent } from '../../chat/chat-drawer/chat-drawer.component';
 import { WebRtcService } from '../../../core/webrtc/webrtc.service';
 import { ProximityVideoDockComponent } from '../../webrtc/proximity-video-dock/proximity-video-dock.component';
+import { RoomAccessService } from '../../../core/rooms/room-access.service';
 
 type EditorTool = 'select' | 'place_furniture' | 'draw_zone' | 'erase';
 
@@ -22,11 +23,12 @@ type EditorTool = 'select' | 'place_furniture' | 'draw_zone' | 'erase';
 })
 export class MapCanvasComponent implements OnInit, OnDestroy {
   protected readonly mapService = inject(MapService);
-  protected readonly workspaceContext = inject(WorkspaceContextService);
+  public readonly workspaceContext = inject(WorkspaceContextService);
   public readonly presenceService = inject(PresenceService);
   protected readonly authService = inject(AuthService);
   public readonly chatService = inject(ChatService);
   public readonly webrtcService = inject(WebRtcService);
+  public readonly roomAccessService = inject(RoomAccessService);
 
   @ViewChild('viewport', { static: true }) viewportRef!: ElementRef<HTMLDivElement>;
 
@@ -375,16 +377,35 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // US02 / US03 / US04: Checagem de colisão física com sala privada trancada
+    const currentZone = this.draftZones().find(
+      z => myPres.gridX >= z.startX && myPres.gridX < z.endX && myPres.gridY >= z.startY && myPres.gridY < z.endY
+    );
+    const targetZone = this.draftZones().find(
+      z => nextGridX >= z.startX && nextGridX < z.endX && nextGridY >= z.startY && nextGridY < z.endY
+    );
+
+    if (targetZone && targetZone !== currentZone && targetZone.zoneType === 'MeetingRoom') {
+      const zoneId = this.getZoneId(targetZone);
+      const isOwnerOrAdmin = this.workspaceContext.isOwnerOrAdmin();
+      const myId = this.presenceService.myUserId() || '';
+      const canEnter = this.roomAccessService.canEnterRoom(zoneId, isOwnerOrAdmin, myId);
+
+      if (!canEnter) {
+        // Bloqueio físico na porta da sala trancada (US02 / US03)
+        this.roomAccessService.activeKnockPrompt.set({ zoneId, zoneName: targetZone.name });
+        return;
+      }
+    }
+
     const nextX = nextGridX * 32;
     const nextY = nextGridY * 32;
 
     this.presenceService.moveStart(direction);
     this.presenceService.moveStop(nextX, nextY, nextGridX, nextGridY);
 
-    // Auto-detect zone entry for contextual zone chat (US02)
-    const enteredZone = this.draftZones().find(
-      z => nextGridX >= z.startX && nextGridX < z.endX && nextGridY >= z.startY && nextGridY < z.endY
-    );
+    // Auto-detect zone entry for contextual zone chat (US02) & WebRTC dedicated room (US01)
+    const enteredZone = targetZone;
     if (enteredZone && (enteredZone as any).id) {
       const ws = this.workspaceContext.currentWorkspace();
       if (ws) {
@@ -392,6 +413,31 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
         this.webrtcService.requestToken(ws.id, map!.id, (enteredZone as any).id, enteredZone.zoneType).subscribe();
       }
     }
+  }
+
+  public getZoneId(zone: MapZone): string {
+    return (zone as any).id || zone.name;
+  }
+
+  public toggleRoomLock(zone: MapZone, event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    const map = this.currentMap();
+    if (!map) return;
+    const zoneId = this.getZoneId(zone);
+    const isLocked = this.roomAccessService.isRoomLocked(zoneId);
+    this.roomAccessService.toggleRoomLock(map.id, zoneId, isLocked);
+  }
+
+  public knockOnDoor(): void {
+    const prompt = this.roomAccessService.activeKnockPrompt();
+    if (!prompt) return;
+    const myPres = this.presenceService.myPresence();
+    const applicantName = myPres?.fullName || 'Visitante';
+    this.roomAccessService.knock(prompt.zoneId, applicantName);
+  }
+
+  public cancelKnock(): void {
+    this.roomAccessService.activeKnockPrompt.set(null);
   }
 
   public proximityInput = '';

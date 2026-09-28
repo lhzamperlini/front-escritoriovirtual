@@ -205,6 +205,15 @@
             <div class="zone-badge">
               <span class="zone-tag">{{ zone.zoneType }}</span>
               <span class="zone-label">{{ zone.name }}</span>
+              @if (zone.zoneType === 'MeetingRoom') {
+                <button 
+                  class="btn-room-lock" 
+                  [class.locked]="roomAccessService.isRoomLocked(getZoneId(zone))"
+                  (click)="toggleRoomLock(zone, $event)"
+                  title="Alternar Tranca da Sala Privada">
+                  {{ roomAccessService.isRoomLocked(getZoneId(zone)) ? '🔒 Trancada' : '🔓 Aberta' }}
+                </button>
+              }
             </div>
 
             @if (isEditMode()) {
@@ -337,6 +346,47 @@
           <button class="btn-secondary" (click)="closeTiledModal()">Cancelar</button>
           <button class="btn-primary" (click)="submitTiledImport()">Importar JSON</button>
         </footer>
+      </div>
+    </div>
+  }
+
+  <!-- Incoming Knocks Alert (US03) -->
+  @if (roomAccessService.incomingKnocks().length > 0) {
+    <div class="knock-alerts-container">
+      @for (knock of roomAccessService.incomingKnocks(); track knock.applicantUserId) {
+        <div class="knock-alert-card">
+          <span class="knock-icon">🚪🔔</span>
+          <div class="knock-text">
+            <strong>{{ knock.applicantName }}</strong> está batendo na porta da sala!
+          </div>
+          <div class="knock-actions">
+            <button class="btn-allow" (click)="roomAccessService.respondKnock(knock.zoneId, knock.applicantUserId, true)">Permitir Entrada</button>
+            <button class="btn-deny" (click)="roomAccessService.respondKnock(knock.zoneId, knock.applicantUserId, false)">Recusar</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Knock on Door Modal (US03) -->
+  @if (roomAccessService.activeKnockPrompt(); as prompt) {
+    <div class="knock-prompt-backdrop">
+      <div class="knock-prompt-modal">
+        <div class="knock-modal-header">
+          <span class="lock-glyph">🔒</span>
+          <h3>Sala Privada Trancada</h3>
+        </div>
+        <p class="knock-modal-desc">
+          A sala <strong>{{ prompt.zoneName }}</strong> está fechada para reunião confidencial. Deseja bater na porta para solicitar permissão de entrada aos participantes?
+        </p>
+        <div class="knock-modal-actions">
+          <button class="btn-knock-confirm" (click)="knockOnDoor()">
+            <span>✊ Bater na Porta</span>
+          </button>
+          <button class="btn-knock-cancel" (click)="cancelKnock()">
+            Voltar
+          </button>
+        </div>
       </div>
     </div>
   }
