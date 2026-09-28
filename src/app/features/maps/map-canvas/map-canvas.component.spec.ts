@@ -7,6 +7,7 @@ import { MapCanvasComponent } from './map-canvas.component';
 import { MapService } from '../map.service';
 import { WorkspaceContextService } from '../../../core/workspace/workspace-context.service';
 import { ChatService } from '../../chat/chat.service';
+import { WebRtcService } from '../../../core/webrtc/webrtc.service';
 import { FURNITURE_CATALOG } from '../map.model';
 
 describe('MapCanvasComponent', () => {
@@ -35,12 +36,28 @@ describe('MapCanvasComponent', () => {
       closeDrawer: () => {}
     };
 
+    const mockWebRtcService = {
+      activeRoomName: signal(null),
+      isMicMuted: signal(false),
+      isCameraOff: signal(true),
+      isScreenSharing: signal(false),
+      peers: signal([]),
+      visiblePeers: signal([]),
+      nearbyVideoPeers: signal([]),
+      requestToken: () => of({ token: 't', roomName: 'r', liveKitUrl: 'url', identity: 'id', fullName: 'fn' }),
+      updatePeerProximity: () => {},
+      toggleMic: () => {},
+      toggleCamera: () => {},
+      toggleScreenShare: () => {}
+    };
+
     await TestBed.configureTestingModule({
       imports: [MapCanvasComponent],
       providers: [
         MapService,
         WorkspaceContextService,
         { provide: ChatService, useValue: mockChatService },
+        { provide: WebRtcService, useValue: mockWebRtcService },
         provideHttpClient(),
         provideHttpClientTesting()
       ]

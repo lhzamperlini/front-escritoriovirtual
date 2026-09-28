@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, OnDestroy, ViewChild, inject, signal, computed, HostListener } from '@angular/core';
+import { Component, ElementRef, OnInit, OnDestroy, ViewChild, inject, signal, computed, effect, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MapService } from '../map.service';
@@ -8,13 +8,15 @@ import { PresenceService, PresenceState } from '../../../core/presence/presence.
 import { AuthService } from '../../../core/auth/auth.service';
 import { ChatService } from '../../chat/chat.service';
 import { ChatDrawerComponent } from '../../chat/chat-drawer/chat-drawer.component';
+import { WebRtcService } from '../../../core/webrtc/webrtc.service';
+import { ProximityVideoDockComponent } from '../../webrtc/proximity-video-dock/proximity-video-dock.component';
 
 type EditorTool = 'select' | 'place_furniture' | 'draw_zone' | 'erase';
 
 @Component({
   selector: 'app-map-canvas',
   standalone: true,
-  imports: [CommonModule, FormsModule, ChatDrawerComponent],
+  imports: [CommonModule, FormsModule, ChatDrawerComponent, ProximityVideoDockComponent],
   templateUrl: './map-canvas.component.html',
   styleUrls: ['./map-canvas.component.scss']
 })
@@ -24,6 +26,7 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
   public readonly presenceService = inject(PresenceService);
   protected readonly authService = inject(AuthService);
   public readonly chatService = inject(ChatService);
+  public readonly webrtcService = inject(WebRtcService);
 
   @ViewChild('viewport', { static: true }) viewportRef!: ElementRef<HTMLDivElement>;
 
@@ -69,6 +72,19 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
     { id: 'away', label: 'Ausente', color: '#94a3b8', icon: '🌙' }
   ];
 
+  constructor() {
+    effect(() => {
+      const my = this.presenceService.myPresence();
+      const remotes = this.presenceService.remoteUsers();
+      if (my) {
+        this.webrtcService.updatePeerProximity(
+          { x: my.x, y: my.y },
+          remotes.map(r => ({ userId: r.userId, fullName: r.fullName || 'Colega', x: r.x, y: r.y }))
+        );
+      }
+    });
+  }
+
   public ngOnInit(): void {
     const user = this.authService.currentUser();
     const userId = (user?.claims?.['sub'] as string) || (user?.email) || 'my-user';
@@ -107,6 +123,7 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
     const ws = this.workspaceContext.currentWorkspace();
     if (ws) {
       this.presenceService.joinMap(ws.id, map.id, 320, 320);
+      this.webrtcService.requestToken(ws.id, map.id).subscribe();
     }
   }
 
@@ -372,6 +389,7 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
       const ws = this.workspaceContext.currentWorkspace();
       if (ws) {
         this.chatService.joinZoneChat(ws.id, (enteredZone as any).id, enteredZone.name).subscribe();
+        this.webrtcService.requestToken(ws.id, map!.id, (enteredZone as any).id, enteredZone.zoneType).subscribe();
       }
     }
   }

@@ -836,6 +836,15 @@
   }
 }
 
+/* Floating Proximity Video Dock (US01, US02, US03) */
+.floating-video-dock {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+}
+
 @keyframes bubbleFade {
   0% { opacity: 0; transform: translate(-50%, -80%); }
   5% { opacity: 1; transform: translate(-50%, -100%); }

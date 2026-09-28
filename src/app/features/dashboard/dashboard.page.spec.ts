@@ -10,6 +10,7 @@ import { UserProfile } from '../../core/auth/user-profile.model';
 import { WorkspaceDto, WorkspaceRole } from '../../core/workspace/workspace.model';
 import { MapService } from '../maps/map.service';
 import { ChatService } from '../chat/chat.service';
+import { WebRtcService } from '../../core/webrtc/webrtc.service';
 
 describe('DashboardPage', () => {
   let component: DashboardPage;
@@ -102,6 +103,21 @@ describe('DashboardPage', () => {
       closeDrawer: () => {}
     };
 
+    const mockWebRtcService = {
+      activeRoomName: signal(null),
+      isMicMuted: signal(false),
+      isCameraOff: signal(true),
+      isScreenSharing: signal(false),
+      peers: signal([]),
+      visiblePeers: signal([]),
+      nearbyVideoPeers: signal([]),
+      requestToken: () => of({ token: 't', roomName: 'r', liveKitUrl: 'url', identity: 'id', fullName: 'fn' }),
+      updatePeerProximity: () => {},
+      toggleMic: () => {},
+      toggleCamera: () => {},
+      toggleScreenShare: () => {}
+    };
+
     await TestBed.configureTestingModule({
       imports: [DashboardPage],
       providers: [
@@ -110,6 +126,7 @@ describe('DashboardPage', () => {
         { provide: WorkspaceContextService, useValue: workspaceContextMock },
         { provide: MapService, useValue: mockMapService },
         { provide: ChatService, useValue: mockChatService },
+        { provide: WebRtcService, useValue: mockWebRtcService },
         { provide: Router, useValue: routerMock }
       ]
     }).compileComponents();
