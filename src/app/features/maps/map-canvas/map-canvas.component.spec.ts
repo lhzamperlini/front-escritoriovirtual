@@ -71,4 +71,41 @@ describe('MapCanvasComponent', () => {
     expect(objects[objects.length - 1].coordX).toBe(15);
     expect(objects[objects.length - 1].coordY).toBe(20);
   });
+
+  it('should change user status', () => {
+    component.presenceService.currentMapId.set('map-1');
+    component.presenceService.myPresence.set({
+      userId: 'test-user',
+      mapId: 'map-1',
+      x: 32,
+      y: 32,
+      gridX: 1,
+      gridY: 1,
+      status: 'available',
+      lastHeartbeat: Date.now()
+    });
+
+    component.changeUserStatus('focus');
+    expect(component.presenceService.myPresence()?.status).toBe('focus');
+  });
+
+  it('should handle keyboard navigation WASD', () => {
+    component.presenceService.currentMapId.set('map-1');
+    component.presenceService.myPresence.set({
+      userId: 'test-user',
+      mapId: 'map-1',
+      x: 32,
+      y: 32,
+      gridX: 1,
+      gridY: 1,
+      status: 'available',
+      lastHeartbeat: Date.now()
+    });
+
+    const keyEvent = new KeyboardEvent('keydown', { code: 'KeyD' });
+    component.onKeyDown(keyEvent);
+
+    expect(component.presenceService.myPresence()?.gridX).toBe(2);
+    expect(component.presenceService.myPresence()?.x).toBe(64);
+  });
 });

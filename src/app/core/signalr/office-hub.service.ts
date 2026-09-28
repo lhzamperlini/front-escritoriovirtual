@@ -61,7 +61,7 @@ export class OfficeHubService {
   private hubConnection: signalR.HubConnection | null = null;
   public readonly isConnected = signal<boolean>(false);
 
-  // Event streams
+  public readonly currentMapPresences$ = new Subject<UserPresenceEvent[]>();
   public readonly avatarUpdated$ = new Subject<AvatarUpdateEvent>();
   public readonly userJoined$ = new Subject<UserPresenceEvent>();
   public readonly userLeft$ = new Subject<string>();
@@ -110,6 +110,10 @@ export class OfficeHubService {
 
   private registerServerEvents(): void {
     if (!this.hubConnection) return;
+
+    this.hubConnection.on('CurrentMapPresences', (presences: any) => {
+      this.currentMapPresences$.next(Array.isArray(presences) ? presences : []);
+    });
 
     this.hubConnection.on('AvatarUpdated', (userId: string, newAvatarConfig: any) => {
       this.avatarUpdated$.next({ userId, avatarConfig: newAvatarConfig });
@@ -177,6 +181,12 @@ export class OfficeHubService {
   public async moveStop(mapId: string, x: number, y: number, gridX: number, gridY: number): Promise<void> {
     if (this.hubConnection?.state === signalR.HubConnectionState.Connected) {
       await this.hubConnection.invoke('MoveStop', mapId, x, y, gridX, gridY);
+    }
+  }
+
+  public async heartbeat(mapId: string): Promise<void> {
+    if (this.hubConnection?.state === signalR.HubConnectionState.Connected) {
+      await this.hubConnection.invoke('Heartbeat', mapId);
     }
   }
 

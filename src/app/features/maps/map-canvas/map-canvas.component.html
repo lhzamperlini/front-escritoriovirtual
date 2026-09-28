@@ -11,6 +11,19 @@
 
     <!-- Toolbar Actions -->
     <div class="map-actions">
+      <!-- Status Picker (US02) -->
+      <div class="status-selector">
+        <label class="status-label">Status:</label>
+        <select 
+          [ngModel]="presenceService.myPresence()?.status || 'available'" 
+          (ngModelChange)="changeUserStatus($event)"
+          class="status-dropdown">
+          @for (s of statusList; track s.id) {
+            <option [value]="s.id">{{ s.icon }} {{ s.label }}</option>
+          }
+        </select>
+      </div>
+
       <!-- Zoom Controls -->
       <div class="zoom-controls">
         <button class="btn-tool" (click)="zoomOut()" title="Diminuir Zoom">－</button>
@@ -203,6 +216,59 @@
             @if (isEditMode()) {
               <span class="remove-hover">✕</span>
             }
+          </div>
+        }
+
+        <!-- Avatars Layer (US01, US02, US03) -->
+        <!-- Remote Avatars -->
+        @for (user of presenceService.remoteUsers(); track user.userId) {
+          <div 
+            class="avatar-node remote-avatar"
+            [class.reconnecting]="user.status === 'reconnecting'"
+            [class.moving]="user.isMoving"
+            [style.left.px]="user.x"
+            [style.top.px]="user.y">
+            
+            <div class="avatar-nametag">
+              <span class="status-dot" [attr.data-status]="user.status"></span>
+              <span class="avatar-name">{{ user.fullName || 'Colega' }}</span>
+              @if (user.status === 'reconnecting') {
+                <span class="grace-badge">Reconectando...</span>
+              }
+              @if (user.status === 'focus') {
+                <span class="focus-badge">Foco 🎯</span>
+              }
+            </div>
+
+            <div class="avatar-sprite" [attr.data-direction]="user.direction || 'down'">
+              <div class="avatar-circle">
+                <span class="avatar-glyph">👤</span>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Local User Avatar -->
+        @if (presenceService.myPresence(); as my) {
+          <div 
+            class="avatar-node local-avatar"
+            [class.moving]="my.isMoving"
+            [style.left.px]="my.x"
+            [style.top.px]="my.y">
+            
+            <div class="avatar-nametag is-me">
+              <span class="status-dot" [attr.data-status]="my.status"></span>
+              <span class="avatar-name">Você</span>
+              @if (my.status === 'focus') {
+                <span class="focus-badge">Foco 🎯</span>
+              }
+            </div>
+
+            <div class="avatar-sprite" [attr.data-direction]="my.direction || 'down'">
+              <div class="avatar-circle local-glow">
+                <span class="avatar-glyph">🧙‍♂️</span>
+              </div>
+            </div>
           </div>
         }
       </div>

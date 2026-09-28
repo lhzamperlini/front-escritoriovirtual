@@ -1,9 +1,11 @@
-import { Component, ElementRef, OnInit, ViewChild, inject, signal, computed, HostListener } from '@angular/core';
+import { Component, ElementRef, OnInit, OnDestroy, ViewChild, inject, signal, computed, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MapService } from '../map.service';
 import { MapData, MapObject, MapZone, ZoneType, FURNITURE_CATALOG, FurnitureCatalogItem } from '../map.model';
 import { WorkspaceContextService } from '../../../core/workspace/workspace-context.service';
+import { PresenceService, PresenceState } from '../../../core/presence/presence.service';
+import { AuthService } from '../../../core/auth/auth.service';
 
 type EditorTool = 'select' | 'place_furniture' | 'draw_zone' | 'erase';
 
@@ -14,9 +16,11 @@ type EditorTool = 'select' | 'place_furniture' | 'draw_zone' | 'erase';
   templateUrl: './map-canvas.component.html',
   styleUrls: ['./map-canvas.component.scss']
 })
-export class MapCanvasComponent implements OnInit {
+export class MapCanvasComponent implements OnInit, OnDestroy {
   protected readonly mapService = inject(MapService);
   protected readonly workspaceContext = inject(WorkspaceContextService);
+  public readonly presenceService = inject(PresenceService);
+  protected readonly authService = inject(AuthService);
 
   @ViewChild('viewport', { static: true }) viewportRef!: ElementRef<HTMLDivElement>;
 
@@ -55,7 +59,18 @@ export class MapCanvasComponent implements OnInit {
 
   public readonly furnitureCatalog = FURNITURE_CATALOG;
 
+  public readonly statusList = [
+    { id: 'available', label: 'Disponível', color: '#10b981', icon: '🟢' },
+    { id: 'focus', label: 'Foco / Não Perturbe', color: '#f59e0b', icon: '🎯' },
+    { id: 'busy', label: 'Ocupado', color: '#ef4444', icon: '🔴' },
+    { id: 'away', label: 'Ausente', color: '#94a3b8', icon: '🌙' }
+  ];
+
   public ngOnInit(): void {
+    const user = this.authService.currentUser();
+    const userId = (user?.claims?.['sub'] as string) || (user?.email) || 'my-user';
+    this.presenceService.myUserId.set(userId);
+
     const ws = this.workspaceContext.currentWorkspace();
     if (ws) {
       this.mapService.loadWorkspaceMaps(ws.id).subscribe((maps) => {
@@ -71,6 +86,10 @@ export class MapCanvasComponent implements OnInit {
     }
   }
 
+  public ngOnDestroy(): void {
+    this.presenceService.leaveMap();
+  }
+
   public loadMapDetails(mapId: string): void {
     this.mapService.loadMap(mapId).subscribe((map) => {
       this.setLocalMap(map);
@@ -81,6 +100,11 @@ export class MapCanvasComponent implements OnInit {
     if (!map) return;
     this.draftObjects.set(JSON.parse(JSON.stringify(map.objects || [])));
     this.draftZones.set(JSON.parse(JSON.stringify(map.zones || [])));
+
+    const ws = this.workspaceContext.currentWorkspace();
+    if (ws) {
+      this.presenceService.joinMap(ws.id, map.id, 320, 320);
+    }
   }
 
   public setTool(tool: EditorTool): void {
@@ -266,5 +290,75 @@ export class MapCanvasComponent implements OnInit {
         this.tiledError.set('Erro ao importar dados do Tiled.');
       }
     });
+  }
+
+  public changeUserStatus(status: string): void {
+    this.presenceService.setStatus(status);
+  }
+
+  @HostListener('window:keydown', ['$event'])
+  public onKeyDown(event: KeyboardEvent): void {
+    if (this.isEditMode() || this.isTiledModalOpen()) return;
+
+    const target = event.target as HTMLElement;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+      return;
+    }
+
+    let dx = 0;
+    let dy = 0;
+    let direction = 'down';
+
+    switch (event.code) {
+      case 'KeyW':
+      case 'ArrowUp':
+        dy = -1;
+        direction = 'up';
+        break;
+      case 'KeyS':
+      case 'ArrowDown':
+        dy = 1;
+        direction = 'down';
+        break;
+      case 'KeyA':
+      case 'ArrowLeft':
+        dx = -1;
+        direction = 'left';
+        break;
+      case 'KeyD':
+      case 'ArrowRight':
+        dx = 1;
+        direction = 'right';
+        break;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+
+    const myPres = this.presenceService.myPresence();
+    if (!myPres) return;
+
+    const map = this.currentMap();
+    const maxX = (map?.gridWidth || 100) - 1;
+    const maxY = (map?.gridHeight || 100) - 1;
+
+    const nextGridX = Math.max(0, Math.min(myPres.gridX + dx, maxX));
+    const nextGridY = Math.max(0, Math.min(myPres.gridY + dy, maxY));
+
+    // Collision check against solid objects
+    const isSolid = this.draftObjects().some(
+      o => o.coordX === nextGridX && o.coordY === nextGridY && o.isSolid
+    );
+
+    if (isSolid) {
+      return;
+    }
+
+    const nextX = nextGridX * 32;
+    const nextY = nextGridY * 32;
+
+    this.presenceService.moveStart(direction);
+    this.presenceService.moveStop(nextX, nextY, nextGridX, nextGridY);
   }
 }
