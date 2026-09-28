@@ -1,0 +1,238 @@
+<div class="map-container" (window:mouseup)="onMouseUp()">
+  <!-- Top Control Bar -->
+  <header class="map-topbar">
+    <div class="map-meta">
+      <div class="map-badge">
+        <span class="pulse-indicator"></span>
+        <span class="map-name">{{ currentMap()?.name || 'Carregando Escritório...' }}</span>
+      </div>
+      <span class="grid-spec">Grade {{ currentMap()?.gridWidth || 100 }}x{{ currentMap()?.gridHeight || 100 }} • 32px</span>
+    </div>
+
+    <!-- Toolbar Actions -->
+    <div class="map-actions">
+      <!-- Zoom Controls -->
+      <div class="zoom-controls">
+        <button class="btn-tool" (click)="zoomOut()" title="Diminuir Zoom">－</button>
+        <span class="zoom-level">{{ (zoom() * 100).toFixed(0) }}%</span>
+        <button class="btn-tool" (click)="zoomIn()" title="Aumentar Zoom">＋</button>
+        <button class="btn-tool" (click)="resetZoom()" title="Resetar Visualização">↺</button>
+      </div>
+
+      <!-- Import Tiled JSON -->
+      @if (workspaceContext.isOwnerOrAdmin()) {
+        <button class="btn-action" (click)="openTiledModal()" title="Importar Mapa do Tiled">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <span>Importar Tiled</span>
+        </button>
+
+        <!-- Toggle Map Maker / Edit Mode -->
+        <button 
+          class="btn-edit-toggle" 
+          [class.active]="isEditMode()" 
+          (click)="toggleEdit()"
+          title="Alternar Modo Construtor de Mapa">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 20h9"/>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+          </svg>
+          <span>{{ isEditMode() ? 'Sair do Modo Construção' : 'Modo Construção' }}</span>
+        </button>
+
+        @if (isEditMode()) {
+          <button class="btn-save" [disabled]="isSaving()" (click)="saveLayout()" title="Salvar Layout do Mapa">
+            @if (isSaving()) {
+              <span class="spinner"></span>
+              <span>Salvando...</span>
+            } @else {
+              <span>Salvar Layout</span>
+            }
+          </button>
+        }
+      }
+    </div>
+  </header>
+
+  <!-- Map Maker Tools Panel (Active in Edit Mode) -->
+  @if (isEditMode()) {
+    <div class="map-maker-toolbar">
+      <div class="tool-group">
+        <button 
+          class="tool-btn" 
+          [class.active]="activeTool() === 'select'" 
+          (click)="setTool('select')"
+          title="Selecionar / Mover">
+          👆 Navegar
+        </button>
+        <button 
+          class="tool-btn" 
+          [class.active]="activeTool() === 'place_furniture'" 
+          (click)="setTool('place_furniture')"
+          title="Adicionar Mobília">
+          🪑 Móveis
+        </button>
+        <button 
+          class="tool-btn" 
+          [class.active]="activeTool() === 'draw_zone'" 
+          (click)="setTool('draw_zone')"
+          title="Desenhar Zonas de Mesa e Salas">
+          📐 Zonas
+        </button>
+        <button 
+          class="tool-btn erase" 
+          [class.active]="activeTool() === 'erase'" 
+          (click)="setTool('erase')"
+          title="Apagar Objeto / Zona">
+          🗑️ Apagar
+        </button>
+      </div>
+
+      <!-- Furniture Sub-Bar -->
+      @if (activeTool() === 'place_furniture') {
+        <div class="palette-subbar">
+          <span class="palette-title">Mobília:</span>
+          <div class="furniture-items">
+            @for (f of furnitureCatalog; track f.id) {
+              <button 
+                class="furn-pill" 
+                [class.selected]="selectedFurniture().id === f.id"
+                (click)="setFurniture(f)">
+                <span>{{ f.icon }}</span>
+                <span>{{ f.name }}</span>
+              </button>
+            }
+          </div>
+          <button class="btn-rotate" (click)="rotateFurniture()" title="Rotacionar (90°)">
+            ↻ Rotacionar ({{ selectedRotation() }}°)
+          </button>
+        </div>
+      }
+
+      <!-- Zone Sub-Bar -->
+      @if (activeTool() === 'draw_zone') {
+        <div class="palette-subbar">
+          <span class="palette-title">Tipo de Zona:</span>
+          <div class="zone-pills">
+            <button class="zone-pill desk" [class.selected]="selectedZoneType() === 'Desk'" (click)="setZoneType('Desk')">
+              🪑 Mesa de Trabalho
+            </button>
+            <button class="zone-pill room" [class.selected]="selectedZoneType() === 'MeetingRoom'" (click)="setZoneType('MeetingRoom')">
+              🔒 Sala Privada
+            </button>
+            <button class="zone-pill spawn" [class.selected]="selectedZoneType() === 'Spawn'" (click)="setZoneType('Spawn')">
+              🚀 Spawn
+            </button>
+            <button class="zone-pill lounge" [class.selected]="selectedZoneType() === 'Lounge'" (click)="setZoneType('Lounge')">
+              ☕ Lounge
+            </button>
+          </div>
+          <div class="zone-name-input">
+            <input type="text" [(ngModel)]="newZoneName" placeholder="Nome da Zona..." />
+          </div>
+          <span class="help-text">
+            {{ zoneDragStart() ? 'Clique no ponto final para fechar o retângulo' : 'Clique no ponto inicial na grade' }}
+          </span>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Viewport Area -->
+  <main 
+    #viewport
+    class="map-viewport" 
+    [class.cursor-pan]="!isEditMode()"
+    [class.cursor-build]="isEditMode() && activeTool() !== 'select'"
+    (mousedown)="onMouseDown($event)"
+    (mousemove)="onMouseMove($event)">
+
+    <div 
+      class="canvas-world" 
+      [style.transform]="'translate(' + panX() + 'px, ' + panY() + 'px) scale(' + zoom() + ')'">
+      
+      <!-- Grid Background Floor -->
+      <div 
+        class="grid-layer" 
+        [style.width.px]="(currentMap()?.gridWidth || 100) * 32"
+        [style.height.px]="(currentMap()?.gridHeight || 100) * 32">
+
+        <!-- Clickable Tiles Layer in Edit Mode -->
+        @if (isEditMode()) {
+          <div 
+            class="interactive-grid-clicker"
+            [style.width.px]="(currentMap()?.gridWidth || 100) * 32"
+            [style.height.px]="(currentMap()?.gridHeight || 100) * 32"
+            (click)="onGridClick($event)">
+          </div>
+        }
+
+        <!-- Render Zones -->
+        @for (zone of draftZones(); track $index) {
+          <div 
+            class="zone-box" 
+            [attr.data-zone-type]="zone.zoneType"
+            [style.left.px]="zone.startX * 32"
+            [style.top.px]="zone.startY * 32"
+            [style.width.px]="(zone.endX - zone.startX) * 32"
+            [style.height.px]="(zone.endY - zone.startY) * 32">
+            
+            <div class="zone-badge">
+              <span class="zone-tag">{{ zone.zoneType }}</span>
+              <span class="zone-label">{{ zone.name }}</span>
+            </div>
+
+            @if (isEditMode()) {
+              <button class="btn-remove-zone" (click)="removeZone(zone, $event)" title="Remover Zona">✕</button>
+            }
+          </div>
+        }
+
+        <!-- Render Objects / Furniture -->
+        @for (obj of draftObjects(); track $index) {
+          <div 
+            class="map-object-node"
+            [style.left.px]="obj.coordX * 32"
+            [style.top.px]="obj.coordY * 32"
+            [style.transform]="'rotate(' + obj.rotation + 'deg)'"
+            (click)="removeObject(obj, $event)">
+            <span class="object-icon">{{ getFurnitureIcon(obj.assetId) }}</span>
+            @if (isEditMode()) {
+              <span class="remove-hover">✕</span>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </main>
+
+  <!-- Import Tiled Modal -->
+  @if (isTiledModalOpen()) {
+    <div class="modal-backdrop" (click)="closeTiledModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <header class="modal-header">
+          <h3>Importar Mapa do Tiled Map Editor</h3>
+          <button class="btn-close" (click)="closeTiledModal()">✕</button>
+        </header>
+        <div class="modal-body">
+          <p>Cole abaixo o conteúdo JSON exportado do <strong>Tiled Map Editor</strong> (Camadas de colisão, paredes e chão):</p>
+          <textarea 
+            [(ngModel)]="tiledJsonInput" 
+            placeholder='{ "compressionlevel": -1, "height": 100, "infinite": false, "layers": [...] }'
+            rows="10">
+          </textarea>
+          @if (tiledError()) {
+            <span class="error-msg">{{ tiledError() }}</span>
+          }
+        </div>
+        <footer class="modal-footer">
+          <button class="btn-secondary" (click)="closeTiledModal()">Cancelar</button>
+          <button class="btn-primary" (click)="submitTiledImport()">Importar JSON</button>
+        </footer>
+      </div>
+    </div>
+  }
+</div>

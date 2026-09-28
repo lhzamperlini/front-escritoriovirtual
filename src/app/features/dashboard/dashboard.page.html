@@ -156,11 +156,11 @@
             <p>Seu espaço de trabalho compartilhado está pronto. Conecte-se com seus colegas no mapa ou participe de salas com áudio espacial.</p>
           </div>
           <div class="hero-actions">
-            <button type="button" class="btn-primary">
+            <button type="button" class="btn-primary" (click)="toggleOfficeMap()">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
                 <polygon points="5 3 19 12 5 21 5 3"></polygon>
               </svg>
-              Entrar no Escritório 2D
+              {{ isOfficeMapActive() ? 'Ocultar Mapa 2D' : 'Entrar no Escritório 2D' }}
             </button>
             <button type="button" class="btn-secondary" (click)="toggleClaims()">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
@@ -173,6 +173,13 @@
           </div>
         </div>
       </section>
+
+      <!-- 2D Virtual Office Map Canvas (Requisito 04) -->
+      @if (isOfficeMapActive()) {
+        <section class="office-map-section">
+          <app-map-canvas></app-map-canvas>
+        </section>
+      }
 
       <!-- Office Hub Highlights Grid -->
       <section class="grid-cards">

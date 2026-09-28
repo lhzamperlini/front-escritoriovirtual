@@ -8,6 +8,7 @@ import { of } from 'rxjs';
 import { signal } from '@angular/core';
 import { UserProfile } from '../../core/auth/user-profile.model';
 import { WorkspaceDto, WorkspaceRole } from '../../core/workspace/workspace.model';
+import { MapService } from '../maps/map.service';
 
 describe('DashboardPage', () => {
   let component: DashboardPage;
@@ -66,12 +67,27 @@ describe('DashboardPage', () => {
       navigate: vi.fn(() => Promise.resolve(true))
     };
 
+    const mockMapService = {
+      currentMap: signal(null),
+      workspaceMaps: signal([]),
+      isEditMode: signal(false),
+      isLoading: signal(false),
+      isSaving: signal(false),
+      loadWorkspaceMaps: () => of([]),
+      loadMap: () => of(null),
+      createMap: () => of(null),
+      saveMapLayout: () => of(null),
+      importTiled: () => of(null),
+      toggleEditMode: () => {}
+    };
+
     await TestBed.configureTestingModule({
       imports: [DashboardPage],
       providers: [
         { provide: AuthService, useValue: mockAuthService },
         { provide: WorkspacesService, useValue: workspacesServiceMock },
         { provide: WorkspaceContextService, useValue: workspaceContextMock },
+        { provide: MapService, useValue: mockMapService },
         { provide: Router, useValue: routerMock }
       ]
     }).compileComponents();

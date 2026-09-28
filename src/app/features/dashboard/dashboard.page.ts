@@ -9,13 +9,14 @@ import { WorkspaceDto, WorkspaceRole, WorkspaceInviteDto } from '../../core/work
 
 import { AvatarCustomizerComponent } from '../avatar/avatar-customizer.component';
 import { AvatarService } from '../avatar/avatar.service';
+import { MapCanvasComponent } from '../maps/map-canvas/map-canvas.component';
 
 type UserStatus = 'available' | 'focus' | 'in_meeting' | 'away';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, AvatarCustomizerComponent],
+  imports: [CommonModule, FormsModule, AvatarCustomizerComponent, MapCanvasComponent],
   templateUrl: './dashboard.page.html',
   styleUrls: ['./dashboard.page.scss']
 })
@@ -27,6 +28,7 @@ export class DashboardPage implements OnInit {
   private readonly router = inject(Router);
 
   public readonly isAvatarModalOpen = signal<boolean>(false);
+  public readonly isOfficeMapActive = signal<boolean>(true);
 
   protected readonly currentStatus = signal<UserStatus>('available');
   protected readonly showClaims = signal<boolean>(false);
@@ -154,6 +156,10 @@ export class DashboardPage implements OnInit {
       case WorkspaceRole.Guest: return 'Convidado';
       default: return 'Membro';
     }
+  }
+
+  public toggleOfficeMap(): void {
+    this.isOfficeMapActive.update(v => !v);
   }
 
   public openAvatarCustomizer(): void {
