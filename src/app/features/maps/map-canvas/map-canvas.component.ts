@@ -120,10 +120,23 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
     });
   }
 
+  public normalizeZoneType(type: any): ZoneType {
+    if (typeof type === 'number') {
+      const mapping: ZoneType[] = ['Desk', 'MeetingRoom', 'Spawn', 'Lounge'];
+      return mapping[type] || 'Desk';
+    }
+    return (type as ZoneType) || 'Desk';
+  }
+
   private setLocalMap(map?: MapData | null): void {
     if (!map) return;
     this.draftObjects.set(JSON.parse(JSON.stringify(map.objects || [])));
-    this.draftZones.set(JSON.parse(JSON.stringify(map.zones || [])));
+    const rawZones: any[] = JSON.parse(JSON.stringify(map.zones || []));
+    const normalizedZones: MapZone[] = rawZones.map(z => ({
+      ...z,
+      zoneType: this.normalizeZoneType(z.zoneType)
+    }));
+    this.draftZones.set(normalizedZones);
 
     const ws = this.workspaceContext.currentWorkspace();
     if (ws) {
@@ -233,7 +246,12 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
     const map = this.currentMap();
     if (!map) return;
 
-    this.mapService.saveMapLayout(map.id, this.draftObjects(), this.draftZones()).subscribe({
+    const sanitizedZones = this.draftZones().map(z => ({
+      ...z,
+      zoneType: this.normalizeZoneType(z.zoneType)
+    }));
+
+    this.mapService.saveMapLayout(map.id, this.draftObjects(), sanitizedZones).subscribe({
       next: (updated) => {
         this.setLocalMap(updated);
         alert('Layout salvo com sucesso!');
