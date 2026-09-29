@@ -4,13 +4,14 @@ import { AuthService } from '../../core/auth/auth.service';
 import { WorkspacesService } from '../workspaces/workspaces.service';
 import { WorkspaceContextService } from '../../core/workspace/workspace-context.service';
 import { Router } from '@angular/router';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { signal } from '@angular/core';
 import { UserProfile } from '../../core/auth/user-profile.model';
 import { WorkspaceDto, WorkspaceRole } from '../../core/workspace/workspace.model';
 import { MapService } from '../maps/map.service';
 import { ChatService } from '../chat/chat.service';
 import { WebRtcService } from '../../core/webrtc/webrtc.service';
+import { WhiteboardService } from '../../core/whiteboard/whiteboard.service';
 
 describe('DashboardPage', () => {
   let component: DashboardPage;
@@ -111,6 +112,7 @@ describe('DashboardPage', () => {
       peers: signal([]),
       visiblePeers: signal([]),
       nearbyVideoPeers: signal([]),
+      activeScreenShares: signal([]),
       requestToken: () => of({ token: 't', roomName: 'r', liveKitUrl: 'url', identity: 'id', fullName: 'fn' }),
       updatePeerProximity: () => {},
       toggleMic: () => {},
@@ -127,6 +129,18 @@ describe('DashboardPage', () => {
         { provide: MapService, useValue: mockMapService },
         { provide: ChatService, useValue: mockChatService },
         { provide: WebRtcService, useValue: mockWebRtcService },
+        {
+          provide: WhiteboardService,
+          useValue: {
+            isModalOpen: signal(false),
+            activeBoard: signal(null),
+            activeZoneId: signal(null),
+            isSaving: signal(false),
+            deltaReceived$: new Subject(),
+            openWhiteboard: vi.fn(),
+            closeWhiteboard: vi.fn()
+          }
+        },
         { provide: Router, useValue: routerMock }
       ]
     }).compileComponents();

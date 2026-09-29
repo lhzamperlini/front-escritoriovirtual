@@ -46,6 +46,27 @@
     }
   </div>
 
+  <!-- Multi-Screenshare Grid (US01, US02) -->
+  @if (webrtcService.activeScreenShares().length > 0) {
+    <div class="screenshare-theater-grid" [attr.data-count]="webrtcService.activeScreenShares().length">
+      @for (share of webrtcService.activeScreenShares(); track share.id) {
+        <div class="screenshare-tile">
+          <div class="screen-header">
+            <span class="screen-icon">🖥️</span>
+            <span class="screen-title">{{ share.presenterName }}</span>
+            <span class="hd-badge">1080p HD • Multi-Share</span>
+          </div>
+          <div class="screen-surface">
+            <div class="screen-content-mock">
+              <span class="mock-code-icon">💻</span>
+              <span class="mock-caption">Transmissão em Alta Definição (contentHint: detail)</span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
   <!-- Bottom Media Control Toolbar -->
   <div class="media-controls-toolbar">
     <button 

@@ -2,12 +2,13 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { MapCanvasComponent } from './map-canvas.component';
 import { MapService } from '../map.service';
 import { WorkspaceContextService } from '../../../core/workspace/workspace-context.service';
 import { ChatService } from '../../chat/chat.service';
 import { WebRtcService } from '../../../core/webrtc/webrtc.service';
+import { WhiteboardService } from '../../../core/whiteboard/whiteboard.service';
 import { FURNITURE_CATALOG } from '../map.model';
 
 describe('MapCanvasComponent', () => {
@@ -44,11 +45,24 @@ describe('MapCanvasComponent', () => {
       peers: signal([]),
       visiblePeers: signal([]),
       nearbyVideoPeers: signal([]),
+      activeScreenShares: signal([]),
       requestToken: () => of({ token: 't', roomName: 'r', liveKitUrl: 'url', identity: 'id', fullName: 'fn' }),
       updatePeerProximity: () => {},
       toggleMic: () => {},
       toggleCamera: () => {},
       toggleScreenShare: () => {}
+    };
+
+    const mockWhiteboardService = {
+      isModalOpen: signal(false),
+      activeBoard: signal(null),
+      activeZoneId: signal(null),
+      isSaving: signal(false),
+      deltaReceived$: new Subject(),
+      openWhiteboard: vi.fn(),
+      closeWhiteboard: vi.fn(),
+      saveSnapshot: () => of(null),
+      broadcastPatch: () => {}
     };
 
     await TestBed.configureTestingModule({
@@ -58,6 +72,7 @@ describe('MapCanvasComponent', () => {
         WorkspaceContextService,
         { provide: ChatService, useValue: mockChatService },
         { provide: WebRtcService, useValue: mockWebRtcService },
+        { provide: WhiteboardService, useValue: mockWhiteboardService },
         provideHttpClient(),
         provideHttpClientTesting()
       ]

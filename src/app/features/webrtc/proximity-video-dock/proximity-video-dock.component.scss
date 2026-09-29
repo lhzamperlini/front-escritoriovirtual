@@ -182,3 +182,104 @@
   from { transform: scaleY(0.4); }
   to { transform: scaleY(1.2); }
 }
+
+/* Multi-Screenshare Split / Grid Layout (US01, US02) */
+.screenshare-theater-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  width: 90vw;
+  max-width: 960px;
+  max-height: 48vh;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: rgba(10, 15, 29, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  overflow-y: auto;
+
+  &[data-count="1"] {
+    grid-template-columns: 1fr;
+    max-width: 640px;
+  }
+
+  &[data-count="2"] {
+    grid-template-columns: 1fr 1fr;
+    max-width: 880px;
+  }
+
+  &[data-count="3"], &[data-count="4"] {
+    grid-template-columns: 1fr 1fr;
+    max-width: 960px;
+  }
+}
+
+.screenshare-tile {
+  background: #020617;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+
+  .screen-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: rgba(15, 23, 42, 0.95);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+
+    .screen-icon {
+      font-size: 0.9rem;
+    }
+
+    .screen-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #f1f5f9;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hd-badge {
+      font-size: 0.68rem;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+  }
+
+  .screen-surface {
+    height: 180px;
+    background: linear-gradient(135deg, #090d16, #0f172a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .screen-content-mock {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      color: #64748b;
+
+      .mock-code-icon {
+        font-size: 2.2rem;
+      }
+
+      .mock-caption {
+        font-size: 0.72rem;
+        font-weight: 500;
+      }
+    }
+  }
+}

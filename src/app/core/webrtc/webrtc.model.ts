@@ -16,4 +16,5 @@ export interface PeerMediaState {
   isSpeaking?: boolean;
   videoStreamUrl?: string;
   isMuted?: boolean;
+  isScreenSharing?: boolean;
 }

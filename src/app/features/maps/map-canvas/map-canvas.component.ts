@@ -11,13 +11,15 @@ import { ChatDrawerComponent } from '../../chat/chat-drawer/chat-drawer.componen
 import { WebRtcService } from '../../../core/webrtc/webrtc.service';
 import { ProximityVideoDockComponent } from '../../webrtc/proximity-video-dock/proximity-video-dock.component';
 import { RoomAccessService } from '../../../core/rooms/room-access.service';
+import { WhiteboardService } from '../../../core/whiteboard/whiteboard.service';
+import { WhiteboardModalComponent } from '../../whiteboard/whiteboard-modal/whiteboard-modal.component';
 
 type EditorTool = 'select' | 'place_furniture' | 'draw_zone' | 'erase';
 
 @Component({
   selector: 'app-map-canvas',
   standalone: true,
-  imports: [CommonModule, FormsModule, ChatDrawerComponent, ProximityVideoDockComponent],
+  imports: [CommonModule, FormsModule, ChatDrawerComponent, ProximityVideoDockComponent, WhiteboardModalComponent],
   templateUrl: './map-canvas.component.html',
   styleUrls: ['./map-canvas.component.scss']
 })
@@ -29,6 +31,7 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
   public readonly chatService = inject(ChatService);
   public readonly webrtcService = inject(WebRtcService);
   public readonly roomAccessService = inject(RoomAccessService);
+  public readonly whiteboardService = inject(WhiteboardService);
 
   @ViewChild('viewport', { static: true }) viewportRef!: ElementRef<HTMLDivElement>;
 
@@ -454,5 +457,12 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
 
   public toggleChatDrawer(): void {
     this.chatService.toggleDrawer();
+  }
+
+  public openWhiteboard(zone?: MapZone): void {
+    const ws = this.workspaceContext.currentWorkspace();
+    if (!ws) return;
+    const zoneId = zone ? this.getZoneId(zone) : (this.currentMap()?.id || 'global-board');
+    this.whiteboardService.openWhiteboard(ws.id, zoneId);
   }
 }

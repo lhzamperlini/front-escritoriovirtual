@@ -1083,4 +1083,36 @@
   }
 }
 
+/* Whiteboard Buttons (US03, US04) */
+.btn-whiteboard-toggle {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  color: #c084fc;
+
+  &:hover {
+    background: rgba(168, 85, 247, 0.3);
+    color: #e9d5ff;
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);
+  }
+}
+
+.btn-zone-whiteboard {
+  background: rgba(168, 85, 247, 0.2);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  color: #e9d5ff;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 4px;
+
+  &:hover {
+    background: rgba(168, 85, 247, 0.4);
+    transform: scale(1.05);
+  }
+}
+
+
 

@@ -68,6 +68,12 @@
         }
       }
 
+      <!-- Open Whiteboard Button (US03, US04) -->
+      <button class="btn-action btn-whiteboard-toggle" (click)="openWhiteboard()" title="Abrir Quadro Branco Colaborativo">
+        <span class="action-icon">🎨</span>
+        <span>Quadro Branco</span>
+      </button>
+
       <!-- Open Chat Drawer Toggle (US04) -->
       <button class="btn-chat-toggle" (click)="toggleChatDrawer()" title="Abrir Chat Multicanal">
         <span class="chat-toggle-icon">💬</span>
@@ -214,6 +220,12 @@
                   {{ roomAccessService.isRoomLocked(getZoneId(zone)) ? '🔒 Trancada' : '🔓 Aberta' }}
                 </button>
               }
+              <button 
+                class="btn-zone-whiteboard" 
+                (click)="openWhiteboard(zone); $event.stopPropagation()"
+                title="Abrir Quadro Branco da Zona">
+                🎨 Quadro
+              </button>
             </div>
 
             @if (isEditMode()) {
@@ -393,4 +405,7 @@
 
   <!-- Multichannel Chat Drawer (US02, US03, US04) -->
   <app-chat-drawer />
+
+  <!-- Collaborative Whiteboard Modal (US03, US04) -->
+  <app-whiteboard-modal />
 </div>

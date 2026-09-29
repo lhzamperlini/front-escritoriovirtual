@@ -1,0 +1,113 @@
+@if (whiteboardService.isModalOpen()) {
+  <div class="whiteboard-backdrop" (click)="close()">
+    <div class="whiteboard-container" (click)="$event.stopPropagation()">
+      <!-- Header Toolbar -->
+      <header class="whiteboard-header">
+        <div class="header-left">
+          <div class="board-badge">
+            <span class="board-icon">🎨</span>
+            <span class="board-title">{{ whiteboardService.activeBoard()?.name || 'Quadro Colaborativo' }}</span>
+          </div>
+          <span class="sync-tag">⚡ Sincronização em Tempo Real (SignalR)</span>
+        </div>
+
+        <!-- Drawing Tools -->
+        <div class="tools-strip">
+          <button 
+            class="tool-btn" 
+            [class.active]="activeTool() === 'pen'" 
+            (click)="setTool('pen')"
+            title="Caneta Livre">
+            ✏️ Desenhar
+          </button>
+
+          <button 
+            class="tool-btn" 
+            [class.active]="activeTool() === 'rectangle'" 
+            (click)="setTool('rectangle')"
+            title="Retângulo / Bloco">
+            ⬜ Caixa
+          </button>
+
+          <button 
+            class="tool-btn" 
+            [class.active]="activeTool() === 'sticky'" 
+            (click)="setTool('sticky')"
+            title="Nota Adesiva (Post-It)">
+            📌 Post-It
+          </button>
+
+          <button 
+            class="tool-btn" 
+            [class.active]="activeTool() === 'eraser'" 
+            (click)="setTool('eraser')"
+            title="Borracha">
+            🧽 Borracha
+          </button>
+
+          <!-- Color Palette -->
+          <div class="color-picker-group">
+            @for (c of colorPalette; track c.hex) {
+              <button 
+                class="color-dot" 
+                [style.background-color]="c.hex" 
+                [class.selected]="activeColor() === c.hex"
+                (click)="setColor(c.hex)"
+                [title]="c.label">
+              </button>
+            }
+          </div>
+
+          <!-- Stroke Width -->
+          <div class="stroke-group">
+            <button class="stroke-btn" [class.active]="activeStrokeWidth() === 2" (click)="setStrokeWidth(2)">Fino</button>
+            <button class="stroke-btn" [class.active]="activeStrokeWidth() === 4" (click)="setStrokeWidth(4)">Médio</button>
+            <button class="stroke-btn" [class.active]="activeStrokeWidth() === 8" (click)="setStrokeWidth(8)">Grosso</button>
+          </div>
+
+          @if (activeTool() === 'sticky') {
+            <div class="sticky-input-box">
+              <input 
+                type="text" 
+                [(ngModel)]="newStickyText" 
+                placeholder="Texto do Post-It..."
+                class="sticky-text-field" />
+            </div>
+          }
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="header-actions">
+          <button class="action-btn" (click)="undo()" title="Desfazer Última Ação">↺ Desfazer</button>
+          <button class="action-btn danger" (click)="clearAll()" title="Limpar Quadro">🗑️ Limpar</button>
+          
+          <button 
+            class="action-btn primary" 
+            [disabled]="whiteboardService.isSaving()" 
+            (click)="saveSnapshot()" 
+            title="Salvar Snapshot no Banco">
+            @if (whiteboardService.isSaving()) {
+              <span>Salvando...</span>
+            } @else {
+              <span>💾 Salvar</span>
+            }
+          </button>
+
+          <button class="btn-close" (click)="close()" title="Fechar Quadro">✕</button>
+        </div>
+      </header>
+
+      <!-- Main Canvas Drawing Area -->
+      <div class="canvas-viewport">
+        <canvas 
+          #boardCanvas 
+          width="1280" 
+          height="720"
+          (mousedown)="onMouseDown($event)"
+          (mousemove)="onMouseMove($event)"
+          (mouseup)="onMouseUp($event)">
+        </canvas>
+      </div>
+    </div>
+  </div>
+}

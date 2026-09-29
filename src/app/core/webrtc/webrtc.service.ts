@@ -23,6 +23,19 @@ export class WebRtcService {
     return this.peers().filter(p => p.isVideoVisible);
   });
 
+  public readonly activeScreenShares = computed(() => {
+    const list: Array<{ id: string; presenterName: string; isSelf: boolean }> = [];
+    if (this.isScreenSharing()) {
+      list.push({ id: 'self', presenterName: 'Você (Sua Tela)', isSelf: true });
+    }
+    for (const peer of this.peers()) {
+      if (peer.isScreenSharing) {
+        list.push({ id: peer.userId, presenterName: `Tela de ${peer.fullName}`, isSelf: false });
+      }
+    }
+    return list;
+  });
+
   public requestToken(workspaceId: string, mapId: string, zoneId?: string | null, zoneType?: string | null) {
     return this.http.post<WebRtcTokenResponse>('/api/webrtc/token', {
       workspaceId,
