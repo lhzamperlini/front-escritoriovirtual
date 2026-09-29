@@ -101,13 +101,7 @@
                 {{ item.name[0].toUpperCase() }}
               </div>
               <div class="role-badge" [attr.data-role]="item.userRole">
-                @switch (item.userRole) {
-                  @case (1) { <span>👑 Proprietário</span> }
-                  @case (2) { <span>🛡️ Administrador</span> }
-                  @case (3) { <span>👤 Membro</span> }
-                  @case (4) { <span>🏷️ Convidado</span> }
-                  @default { <span>Membro</span> }
-                }
+                <span>{{ getRoleName(item.userRole) }}</span>
               </div>
             </div>
 

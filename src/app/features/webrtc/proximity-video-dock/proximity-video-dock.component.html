@@ -6,17 +6,18 @@
       <div class="video-preview-surface">
         @if (!webrtcService.isCameraOff()) {
           <div class="camera-stream-mock">
-            <span class="avatar-camera-icon">🧙‍♂️</span>
+            <app-pipoya-sprite [model]="getMyModel()" direction="down" [isMoving]="false" [scale]="0.85" />
           </div>
         } @else {
           <div class="camera-off-placeholder">
-            <span class="cam-off-icon">📷🚫</span>
+            <app-lucide-icon name="video-off" [size]="20" extraClass="cam-off-icon" />
+            <span class="cam-off-label">Câmera desligada</span>
           </div>
         }
       </div>
 
       <div class="peer-nametag">
-        <span class="mic-status-icon">{{ webrtcService.isMicMuted() ? '🔇' : '🎙️' }}</span>
+        <app-lucide-icon [name]="webrtcService.isMicMuted() ? 'mic-off' : 'mic'" [size]="12" [extraClass]="webrtcService.isMicMuted() ? 'icon-muted' : 'icon-active'" />
         <span class="peer-name">Você</span>
       </div>
     </div>
@@ -29,7 +30,7 @@
         
         <div class="video-preview-surface">
           <div class="camera-stream-mock">
-            <span class="avatar-camera-icon">👤</span>
+            <app-lucide-icon name="user" [size]="24" extraClass="avatar-peer-icon" />
             @if (peer.isSpeaking) {
               <div class="audio-wave-indicator">
                 <span></span><span></span><span></span>
@@ -52,14 +53,14 @@
       @for (share of webrtcService.activeScreenShares(); track share.id) {
         <div class="screenshare-tile">
           <div class="screen-header">
-            <span class="screen-icon">🖥️</span>
+            <app-lucide-icon name="monitor" [size]="14" />
             <span class="screen-title">{{ share.presenterName }}</span>
-            <span class="hd-badge">1080p HD • Multi-Share</span>
+            <span class="hd-badge">1080p HD • Compartilhado</span>
           </div>
           <div class="screen-surface">
             <div class="screen-content-mock">
-              <span class="mock-code-icon">💻</span>
-              <span class="mock-caption">Transmissão em Alta Definição (contentHint: detail)</span>
+              <app-lucide-icon name="laptop" [size]="32" extraClass="mock-laptop-icon" />
+              <span class="mock-caption">Transmissão Ativa (contentHint: detail)</span>
             </div>
           </div>
         </div>
@@ -74,7 +75,7 @@
       [class.active-danger]="webrtcService.isMicMuted()" 
       (click)="toggleMic()" 
       title="{{ webrtcService.isMicMuted() ? 'Ativar Microfone' : 'Silenciar Microfone' }}">
-      {{ webrtcService.isMicMuted() ? '🔇' : '🎙️' }}
+      <app-lucide-icon [name]="webrtcService.isMicMuted() ? 'mic-off' : 'mic'" [size]="16" />
     </button>
 
     <button 
@@ -82,7 +83,7 @@
       [class.active-danger]="webrtcService.isCameraOff()" 
       (click)="toggleCamera()" 
       title="{{ webrtcService.isCameraOff() ? 'Ligar Câmera' : 'Desligar Câmera' }}">
-      {{ webrtcService.isCameraOff() ? '🚫📷' : '📹' }}
+      <app-lucide-icon [name]="webrtcService.isCameraOff() ? 'video-off' : 'video'" [size]="16" />
     </button>
 
     <button 
@@ -90,10 +91,10 @@
       [class.active-blue]="webrtcService.isScreenSharing()" 
       (click)="toggleScreen()" 
       title="Compartilhar Tela">
-      🖥️
+      <app-lucide-icon [name]="webrtcService.isScreenSharing() ? 'monitor-off' : 'monitor'" [size]="16" />
     </button>
 
-    @if (webrtcService.activeRoomName(); as room) {
+    @if (formattedRoomName(); as room) {
       <span class="active-room-pill" title="Canal WebRTC conectado">
         <span class="live-dot"></span>
         {{ room }}

@@ -148,14 +148,11 @@ export class DashboardPage implements OnInit {
     });
   }
 
-  public getRoleName(role?: WorkspaceRole): string {
-    switch (role) {
-      case WorkspaceRole.Owner: return 'Proprietário';
-      case WorkspaceRole.Admin: return 'Administrador';
-      case WorkspaceRole.Member: return 'Membro';
-      case WorkspaceRole.Guest: return 'Convidado';
-      default: return 'Membro';
-    }
+  public getRoleName(role?: any): string {
+    if (role === 'Owner' || role === WorkspaceRole.Owner || role === 1) return 'Proprietário';
+    if (role === 'Admin' || role === WorkspaceRole.Admin || role === 2) return 'Administrador';
+    if (role === 'Guest' || role === WorkspaceRole.Guest || role === 4) return 'Convidado';
+    return 'Membro';
   }
 
   public toggleOfficeMap(): void {

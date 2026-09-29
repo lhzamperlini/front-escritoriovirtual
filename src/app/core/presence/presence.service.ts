@@ -22,12 +22,19 @@ export class PresenceService {
 
   public readonly remoteUsers = computed(() => {
     const map = this.presencesMap();
-    const myId = this.myUserId();
+    const myId = (this.myUserId() || '').toLowerCase();
+    const myState = this.myPresence();
     const list: PresenceState[] = [];
     map.forEach((val, key) => {
-      if (key !== myId) {
-        list.push(val);
+      const valKey = (key || '').toLowerCase();
+      const valUserId = (val.userId || '').toLowerCase();
+      if (myId && (valKey === myId || valUserId === myId)) {
+        return;
       }
+      if (myState && val.connectionId && myState.connectionId && val.connectionId === myState.connectionId) {
+        return;
+      }
+      list.push(val);
     });
     return list;
   });

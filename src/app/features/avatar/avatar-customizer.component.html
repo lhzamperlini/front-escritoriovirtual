@@ -8,14 +8,11 @@
     <header class="customizer-header">
       <div class="title-wrap">
         <div class="header-icon">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-            <circle cx="12" cy="7" r="4"></circle>
-          </svg>
+          <span class="header-glyph">🧙‍♂️</span>
         </div>
         <div>
-          <h2>Personalize seu Avatar</h2>
-          <p>Escolha estilo, cores e acessórios para seu personagem no escritório 2D</p>
+          <h2>Personagens & Avatares WorkAdventure</h2>
+          <p>Escolha o sprite oficial de alta resolução para seu personagem no escritório virtual 2D</p>
         </div>
       </div>
 
@@ -44,186 +41,134 @@
         <div class="stage-frame">
           <div class="stage-glow"></div>
           
-          <!-- Layered Character Representation -->
-          <div class="avatar-canvas" [attr.data-direction]="previewDirection()">
-            <!-- SVG Avatar Layer Stack (Z-Index: Pele -> Olhos -> Calça -> Sapatos -> Blusa -> Cabelo -> Acessórios) -->
-            <svg class="avatar-svg-layers" viewBox="0 0 100 120" width="160" height="192">
-              <defs>
-                <radialGradient id="shadowGlow" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stop-color="rgba(0,0,0,0.4)"/>
-                  <stop offset="100%" stop-color="rgba(0,0,0,0)"/>
-                </radialGradient>
-              </defs>
-
-              <!-- Sombra no Chão -->
-              <ellipse cx="50" cy="112" rx="28" ry="7" fill="url(#shadowGlow)" />
-
-              <!-- Layer 1: Base / Pele (Z: 1) -->
-              <g class="layer-base" [style.fill]="draftAvatar().base.tint">
-                <!-- Cabeça -->
-                <circle cx="50" cy="38" r="18" />
-                <!-- Pescoço -->
-                <rect x="46" y="52" width="8" height="8" rx="2" />
-                <!-- Braços / Mãos -->
-                <circle cx="28" cy="74" r="5" />
-                <circle cx="72" cy="74" r="5" />
-              </g>
-
-              <!-- Layer 2: Olhos (Z: 2) -->
-              <g class="layer-eyes" [style.fill]="draftAvatar().eyes.tint">
-                @if (previewDirection() !== 'up') {
-                  <ellipse cx="44" cy="38" rx="2.5" ry="3.5" />
-                  <ellipse cx="56" cy="38" rx="2.5" ry="3.5" />
-                  <circle cx="45" cy="37" r="1" fill="#ffffff" />
-                  <circle cx="57" cy="37" r="1" fill="#ffffff" />
-                }
-              </g>
-
-              <!-- Layer 3: Calça / Bottom (Z: 3) -->
-              <g class="layer-bottom" [style.fill]="draftAvatar().bottom.tint">
-                <rect x="36" y="80" width="12" height="24" rx="3" />
-                <rect x="52" y="80" width="12" height="24" rx="3" />
-              </g>
-
-              <!-- Layer 4: Sapatos / Shoes (Z: 4) -->
-              <g class="layer-shoes" [style.fill]="draftAvatar().shoes.tint">
-                <rect x="34" y="102" width="14" height="8" rx="3" />
-                <rect x="52" y="102" width="14" height="8" rx="3" />
-              </g>
-
-              <!-- Layer 5: Blusa / Top (Z: 5) -->
-              <g class="layer-top" [style.fill]="draftAvatar().top.tint">
-                <!-- Tronco -->
-                <rect x="34" y="58" width="32" height="26" rx="6" />
-                <!-- Mangas -->
-                <path d="M34 58 L24 74 L30 76 L38 64 Z" />
-                <path d="M66 58 L76 74 L70 76 L62 64 Z" />
-              </g>
-
-              <!-- Layer 6: Cabelo / Hair (Z: 6) -->
-              <g class="layer-hair" [style.fill]="draftAvatar().hair.tint">
-                <path d="M32 36 C32 20, 68 20, 68 36 C68 40, 66 42, 64 36 C60 26, 40 26, 36 36 C34 42, 32 40, 32 36 Z" />
-                @if (draftAvatar().hair.assetId === 'hair_ponytail') {
-                  <path d="M48 22 C52 14, 62 16, 60 24 C58 28, 54 28, 50 25 Z" />
-                }
-                @if (draftAvatar().hair.assetId === 'hair_long_straight') {
-                  <rect x="30" y="32" width="6" height="24" rx="3" />
-                  <rect x="64" y="32" width="6" height="24" rx="3" />
-                }
-              </g>
-
-              <!-- Layer 7: Acessórios (Z: 7) -->
-              @if (draftAvatar().accessories.length > 0) {
-                <g class="layer-accessories" [style.stroke]="draftAvatar().accessories[0].tint" stroke-width="2" fill="none">
-                  @if (draftAvatar().accessories[0].assetId === 'glasses_square' && previewDirection() !== 'up') {
-                    <rect x="40" y="34" width="9" height="7" rx="1" />
-                    <rect x="51" y="34" width="9" height="7" rx="1" />
-                    <line x1="49" y1="37" x2="51" y2="37" />
-                  }
-                  @if (draftAvatar().accessories[0].assetId === 'glasses_round' && previewDirection() !== 'up') {
-                    <circle cx="44" cy="37" r="4" />
-                    <circle cx="56" cy="37" r="4" />
-                    <line x1="48" y1="37" x2="52" y2="37" />
-                  }
-                  @if (draftAvatar().accessories[0].assetId === 'headset_pro') {
-                    <path d="M30 36 A20 20 0 0 1 70 36" stroke-width="3" />
-                    <rect x="28" y="32" width="5" height="12" rx="2" [style.fill]="draftAvatar().accessories[0].tint" />
-                    <rect x="67" y="32" width="5" height="12" rx="2" [style.fill]="draftAvatar().accessories[0].tint" />
-                  }
-                </g>
-              }
-            </svg>
+          <!-- Pipoya Sprite Renderer Preview (Escala 3.5x para alta nitidez) -->
+          <div class="avatar-canvas">
+            <div class="sprite-stage-wrapper">
+              <app-pipoya-sprite 
+                [model]="selectedCharacterModel()"
+                [direction]="previewDirection()"
+                [isMoving]="isWalkingPreview()"
+                [scale]="3.5"
+                [glow]="true" />
+            </div>
+            <!-- Sombra no chão do personagem -->
+            <div class="character-ground-shadow"></div>
           </div>
 
-          <!-- Direction Switcher -->
-          <div class="direction-controls">
-            <button class="dir-btn" [class.active]="previewDirection() === 'down'" (click)="setDirection('down')" title="Frente">Frente</button>
-            <button class="dir-btn" [class.active]="previewDirection() === 'left'" (click)="setDirection('left')" title="Esquerda">Esquerda</button>
-            <button class="dir-btn" [class.active]="previewDirection() === 'right'" (click)="setDirection('right')" title="Direita">Direita</button>
-            <button class="dir-btn" [class.active]="previewDirection() === 'up'" (click)="setDirection('up')" title="Costas">Costas</button>
-          </div>
-        </div>
+          <!-- Controls de rotação & animação da visualização -->
+          <div class="preview-toolbar">
+            <div class="direction-pills">
+              <button 
+                class="dir-btn" 
+                [class.active]="previewDirection() === 'down'" 
+                (click)="setDirection('down')" 
+                title="Olhando para Frente">
+                Frente
+              </button>
+              <button 
+                class="dir-btn" 
+                [class.active]="previewDirection() === 'left'" 
+                (click)="setDirection('left')" 
+                title="Olhando para Esquerda">
+                Esquerda
+              </button>
+              <button 
+                class="dir-btn" 
+                [class.active]="previewDirection() === 'right'" 
+                (click)="setDirection('right')" 
+                title="Olhando para Direita">
+                Direita
+              </button>
+              <button 
+                class="dir-btn" 
+                [class.active]="previewDirection() === 'up'" 
+                (click)="setDirection('up')" 
+                title="Olhando para Trás">
+                Costas
+              </button>
+            </div>
 
-        <div class="preview-badge">
-          <span>Spritesheet 32x32 • 4 Direções</span>
+            <!-- Botão toggle de caminhada -->
+            <button 
+              class="btn-walk-toggle" 
+              [class.active]="isWalkingPreview()"
+              (click)="toggleWalkingPreview()"
+              title="Testar Animação de Passos">
+              {{ isWalkingPreview() ? '⏸️ Parar' : '🚶 Andar' }}
+            </button>
+          </div>
+
+          <div class="character-info-tag">
+            <span class="info-label">Sprite Ativo:</span>
+            <span class="info-value">{{ selectedCharacterModel() }}</span>
+          </div>
         </div>
       </section>
 
-      <!-- Selection & Customization Column -->
+      <!-- Options / Catalog Column -->
       <section class="options-panel">
-        <!-- Navigation Tabs -->
+        <!-- Tabs de Categorias -->
         <nav class="category-tabs">
-          <button class="tab-btn" [class.active]="activeCategory() === 'base'" (click)="setCategory('base')">Pele</button>
-          <button class="tab-btn" [class.active]="activeCategory() === 'hair'" (click)="setCategory('hair')">Cabelo</button>
-          <button class="tab-btn" [class.active]="activeCategory() === 'eyes'" (click)="setCategory('eyes')">Olhos</button>
-          <button class="tab-btn" [class.active]="activeCategory() === 'top'" (click)="setCategory('top')">Blusa</button>
-          <button class="tab-btn" [class.active]="activeCategory() === 'bottom'" (click)="setCategory('bottom')">Calça</button>
-          <button class="tab-btn" [class.active]="activeCategory() === 'shoes'" (click)="setCategory('shoes')">Calçado</button>
-          <button class="tab-btn" [class.active]="activeCategory() === 'accessories'" (click)="setCategory('accessories')">Acessórios</button>
+          <button 
+            class="tab-btn" 
+            [class.active]="activeCategory() === 'models'" 
+            (click)="setCategory('models')">
+            <span>🎭</span>
+            <span>Personagens WorkAdventure</span>
+          </button>
         </nav>
 
-        <!-- Asset Selection Grid -->
-        <div class="assets-section">
-          <h3 class="section-title">Modelo / Corte</h3>
-          <div class="asset-grid">
-            @for (item of currentItems(); track item.id) {
-              <button 
-                class="asset-card" 
-                [class.selected]="currentSelectedAssetId() === item.id"
-                (click)="selectAsset(item.id)">
-                <span class="asset-name">{{ item.name }}</span>
-                @if (currentSelectedAssetId() === item.id) {
-                  <span class="check-badge">✓</span>
+        <!-- Filtros de Personagens -->
+        @if (activeCategory() === 'models') {
+          <div class="filter-pills">
+            <button class="filter-pill" [class.active]="modelFilter() === 'all'" (click)="modelFilter.set('all')">Todos</button>
+            <button class="filter-pill" [class.active]="modelFilter() === 'male'" (click)="modelFilter.set('male')">Masculino</button>
+            <button class="filter-pill" [class.active]="modelFilter() === 'female'" (click)="modelFilter.set('female')">Feminino</button>
+            <button class="filter-pill" [class.active]="modelFilter() === 'leader'" (click)="modelFilter.set('leader')">Líderes / Direção</button>
+            <button class="filter-pill" [class.active]="modelFilter() === 'student'" (click)="modelFilter.set('student')">Estudantes / Jovens</button>
+            <button class="filter-pill" [class.active]="modelFilter() === 'companion'" (click)="modelFilter.set('companion')">Mascotes</button>
+          </div>
+
+          <div class="models-grid">
+            @for (m of filteredPipoyaModels(); track m.id) {
+              <div 
+                class="model-card" 
+                [class.selected]="selectedCharacterModel() === m.filename"
+                (click)="selectPipoyaModel(m)">
+                <div class="model-preview-box">
+                  <app-pipoya-sprite 
+                    [model]="m.filename"
+                    direction="down"
+                    [isMoving]="false"
+                    [scale]="1.5" />
+                </div>
+                <span class="model-name">{{ m.name }}</span>
+                @if (selectedCharacterModel() === m.filename) {
+                  <span class="selected-badge">✓</span>
                 }
-              </button>
+              </div>
             }
           </div>
-        </div>
-
-        <!-- Color & Tint Selector -->
-        <div class="colors-section">
-          <div class="color-header">
-            <h3 class="section-title">Paleta de Cores (Tint Dinâmico)</h3>
-            <div class="custom-color-picker">
-              <label for="colorPicker" class="picker-label">
-                <span class="color-preview-dot" [style.background-color]="currentSelectedTint()"></span>
-                <span class="hex-text">{{ currentSelectedTint().toUpperCase() }}</span>
-              </label>
-              <input 
-                id="colorPicker"
-                type="color" 
-                [value]="currentSelectedTint()" 
-                (input)="onCustomColorChange($event)" />
-            </div>
-          </div>
-
-          <div class="color-swatches">
-            @for (color of colorPalettes; track color) {
-              <button 
-                class="swatch-btn" 
-                [style.background-color]="color"
-                [class.active]="currentSelectedTint().toLowerCase() === color.toLowerCase()"
-                (click)="selectTint(color)"
-                [title]="color">
-              </button>
-            }
-          </div>
-        </div>
+        }
       </section>
     </div>
 
-    <!-- Footer Controls -->
+    <!-- Footer Actions -->
     <footer class="customizer-footer">
-      @if (showSuccessToast()) {
-        <div class="toast-success">
-          <span>✓ Avatar salvo e sincronizado em tempo real!</span>
-        </div>
-      }
+      <div class="footer-left">
+        @if (showSuccessToast()) {
+          <div class="toast-success">
+            <span>✓</span>
+            <span>Avatar salvo com sucesso no escritório!</span>
+          </div>
+        }
+      </div>
+
       <div class="footer-buttons">
         @if (isModal) {
-          <button class="btn-secondary" (click)="close()">Cancelar</button>
+          <button class="btn-cancel" (click)="close()">Cancelar</button>
         }
-        <button class="btn-primary" [disabled]="isSaving()" (click)="save()">
+        <button class="btn-save" [disabled]="isSaving()" (click)="save()">
           @if (isSaving()) {
             <span class="spinner"></span>
             <span>Salvando...</span>

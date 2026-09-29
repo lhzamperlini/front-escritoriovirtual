@@ -6,12 +6,12 @@
         <span class="pulse-indicator"></span>
         <span class="map-name">{{ currentMap()?.name || 'Carregando Escritório...' }}</span>
       </div>
-      <span class="grid-spec">Grade {{ currentMap()?.gridWidth || 100 }}x{{ currentMap()?.gridHeight || 100 }} • 32px</span>
+      <span class="grid-spec">Grade {{ currentMap()?.gridWidth || 100 }}x{{ currentMap()?.gridHeight || 100 }} • 32px WorkAdventure</span>
     </div>
 
     <!-- Toolbar Actions -->
     <div class="map-actions">
-      <!-- Status Picker (US02) -->
+      <!-- Status Picker -->
       <div class="status-selector">
         <label class="status-label">Status:</label>
         <select 
@@ -19,41 +19,44 @@
           (ngModelChange)="changeUserStatus($event)"
           class="status-dropdown">
           @for (s of statusList; track s.id) {
-            <option [value]="s.id">{{ s.icon }} {{ s.label }}</option>
+            <option [value]="s.id">{{ s.label }}</option>
           }
         </select>
       </div>
 
       <!-- Zoom Controls -->
       <div class="zoom-controls">
-        <button class="btn-tool" (click)="zoomOut()" title="Diminuir Zoom">－</button>
+        <button class="btn-tool" (click)="zoomOut()" title="Diminuir Zoom">
+          <app-lucide-icon name="minus" [size]="14" />
+        </button>
         <span class="zoom-level">{{ (zoom() * 100).toFixed(0) }}%</span>
-        <button class="btn-tool" (click)="zoomIn()" title="Aumentar Zoom">＋</button>
-        <button class="btn-tool" (click)="resetZoom()" title="Resetar Visualização">↺</button>
+        <button class="btn-tool" (click)="zoomIn()" title="Aumentar Zoom">
+          <app-lucide-icon name="plus" [size]="14" />
+        </button>
+        <button class="btn-tool" (click)="resetZoom()" title="Resetar Visualização">
+          <app-lucide-icon name="rotate-ccw" [size]="14" />
+        </button>
       </div>
 
-      <!-- Import Tiled JSON -->
+      <!-- Import Tiled JSON & Map Maker (Admin Only) -->
       @if (workspaceContext.isOwnerOrAdmin()) {
+        <button class="btn-action btn-preset-toggle" (click)="applyOfficialCorporatePreset()" title="Carregar Cenário Corporativo Pronto">
+          <app-lucide-icon name="sparkles" [size]="15" />
+          <span>Preset Oficial</span>
+        </button>
+
         <button class="btn-action" (click)="openTiledModal()" title="Importar Mapa do Tiled">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
+          <app-lucide-icon name="upload" [size]="15" />
           <span>Importar Tiled</span>
         </button>
 
-        <!-- Toggle Map Maker / Edit Mode -->
         <button 
           class="btn-edit-toggle" 
           [class.active]="isEditMode()" 
           (click)="toggleEdit()"
-          title="Alternar Modo Construtor de Mapa">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 20h9"/>
-            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-          </svg>
-          <span>{{ isEditMode() ? 'Sair do Modo Construção' : 'Modo Construção' }}</span>
+          title="Alternar Modo Construtor de Cenários">
+          <app-lucide-icon name="edit" [size]="15" />
+          <span>{{ isEditMode() ? 'Fechar Construtor' : 'Modo Construtor' }}</span>
         </button>
 
         @if (isEditMode()) {
@@ -62,21 +65,22 @@
               <span class="spinner"></span>
               <span>Salvando...</span>
             } @else {
-              <span>Salvar Layout</span>
+              <app-lucide-icon name="save" [size]="15" />
+              <span>Salvar Cenário</span>
             }
           </button>
         }
       }
 
-      <!-- Open Whiteboard Button (US03, US04) -->
+      <!-- Open Whiteboard Button -->
       <button class="btn-action btn-whiteboard-toggle" (click)="openWhiteboard()" title="Abrir Quadro Branco Colaborativo">
-        <span class="action-icon">🎨</span>
+        <app-lucide-icon name="palette" [size]="15" />
         <span>Quadro Branco</span>
       </button>
 
-      <!-- Open Chat Drawer Toggle (US04) -->
+      <!-- Open Chat Drawer Toggle -->
       <button class="btn-chat-toggle" (click)="toggleChatDrawer()" title="Abrir Chat Multicanal">
-        <span class="chat-toggle-icon">💬</span>
+        <app-lucide-icon name="message-square" [size]="15" />
         <span>Chat</span>
         @if (chatService.totalUnread() > 0) {
           <span class="chat-badge">{{ chatService.totalUnread() }}</span>
@@ -85,84 +89,163 @@
     </div>
   </header>
 
-  <!-- Map Maker Tools Panel (Active in Edit Mode) -->
+  <!-- Painel do Construtor de Mapas (Ativo em Modo Edição) -->
   @if (isEditMode()) {
-    <div class="map-maker-toolbar">
-      <div class="tool-group">
-        <button 
-          class="tool-btn" 
-          [class.active]="activeTool() === 'select'" 
-          (click)="setTool('select')"
-          title="Selecionar / Mover">
-          👆 Navegar
-        </button>
-        <button 
-          class="tool-btn" 
-          [class.active]="activeTool() === 'place_furniture'" 
-          (click)="setTool('place_furniture')"
-          title="Adicionar Mobília">
-          🪑 Móveis
-        </button>
-        <button 
-          class="tool-btn" 
-          [class.active]="activeTool() === 'draw_zone'" 
-          (click)="setTool('draw_zone')"
-          title="Desenhar Zonas de Mesa e Salas">
-          📐 Zonas
-        </button>
-        <button 
-          class="tool-btn erase" 
-          [class.active]="activeTool() === 'erase'" 
-          (click)="setTool('erase')"
-          title="Apagar Objeto / Zona">
-          🗑️ Apagar
-        </button>
+    <div class="map-maker-dock">
+      <!-- Main Tools Tabs -->
+      <div class="maker-header-row">
+        <div class="tool-modes">
+          <button 
+            class="mode-btn" 
+            [class.active]="activeTool() === 'select'" 
+            (click)="setTool('select')"
+            title="Navegar / Selecionar no Cenário">
+            <app-lucide-icon name="mouse-pointer" [size]="15" />
+            <span>Navegar</span>
+          </button>
+          <button 
+            class="mode-btn" 
+            [class.active]="activeTool() === 'place_furniture'" 
+            (click)="setTool('place_furniture')"
+            title="Construir com Mobília do WorkAdventure">
+            <app-lucide-icon name="armchair" [size]="15" />
+            <span>Móveis & Assets</span>
+          </button>
+          <button 
+            class="mode-btn" 
+            [class.active]="activeTool() === 'draw_zone'" 
+            (click)="setTool('draw_zone')"
+            title="Demarcar Zonas Funcionais">
+            <app-lucide-icon name="square" [size]="15" />
+            <span>Zonas</span>
+          </button>
+          <button 
+            class="mode-btn erase" 
+            [class.active]="activeTool() === 'erase'" 
+            (click)="setTool('erase')"
+            title="Borracha / Apagar Mobílias e Zonas">
+            <app-lucide-icon name="trash-2" [size]="15" />
+            <span>Apagar</span>
+          </button>
+          <button 
+            class="mode-btn btn-apply-preset" 
+            (click)="applyOfficialCorporatePreset()"
+            title="Restaurar Cenário Corporativo Oficial Completo">
+            <app-lucide-icon name="sparkles" [size]="15" />
+            <span>Restaurar Preset</span>
+          </button>
+        </div>
+
+        @if (activeTool() === 'place_furniture') {
+          <div class="rotation-control">
+            <span class="rot-label">Rotação:</span>
+            <button class="btn-rotate" (click)="rotateFurniture()" title="Girar Item (Atalho: Tecla R)">
+              <app-lucide-icon name="rotate-cw" [size]="14" />
+              <span>{{ selectedRotation() }}°</span>
+              <span class="rot-dir-tag">
+                {{ selectedRotation() === 0 ? 'Frente' : selectedRotation() === 90 ? 'Direita' : selectedRotation() === 180 ? 'Costas' : 'Esquerda' }}
+              </span>
+              <kbd class="key-hint">R</kbd>
+            </button>
+          </div>
+        }
       </div>
 
-      <!-- Furniture Sub-Bar -->
+      <!-- Furniture Categories Submenu -->
       @if (activeTool() === 'place_furniture') {
-        <div class="palette-subbar">
-          <span class="palette-title">Mobília:</span>
-          <div class="furniture-items">
-            @for (f of furnitureCatalog; track f.id) {
-              <button 
-                class="furn-pill" 
-                [class.selected]="selectedFurniture().id === f.id"
-                (click)="setFurniture(f)">
-                <span>{{ f.icon }}</span>
-                <span>{{ f.name }}</span>
-              </button>
-            }
-          </div>
-          <button class="btn-rotate" (click)="rotateFurniture()" title="Rotacionar (90°)">
-            ↻ Rotacionar ({{ selectedRotation() }}°)
+        <div class="furniture-category-tabs">
+          <button 
+            class="cat-tab" 
+            [class.active]="activeFurnitureCategory() === 'desks'" 
+            (click)="setFurnitureCategory('desks')">
+            <app-lucide-icon name="briefcase" [size]="14" />
+            <span>Mesas</span>
           </button>
+          <button 
+            class="cat-tab" 
+            [class.active]="activeFurnitureCategory() === 'chairs'" 
+            (click)="setFurnitureCategory('chairs')">
+            <app-lucide-icon name="armchair" [size]="14" />
+            <span>Cadeiras</span>
+          </button>
+          <button 
+            class="cat-tab" 
+            [class.active]="activeFurnitureCategory() === 'tech'" 
+            (click)="setFurnitureCategory('tech')">
+            <app-lucide-icon name="laptop" [size]="14" />
+            <span>Tecnologia</span>
+          </button>
+          <button 
+            class="cat-tab" 
+            [class.active]="activeFurnitureCategory() === 'decor'" 
+            (click)="setFurnitureCategory('decor')">
+            <app-lucide-icon name="sparkles" [size]="14" />
+            <span>Decoração</span>
+          </button>
+          <button 
+            class="cat-tab" 
+            [class.active]="activeFurnitureCategory() === 'lounge'" 
+            (click)="setFurnitureCategory('lounge')">
+            <app-lucide-icon name="coffee" [size]="14" />
+            <span>Lounge</span>
+          </button>
+          <button 
+            class="cat-tab" 
+            [class.active]="activeFurnitureCategory() === 'props'" 
+            (click)="setFurnitureCategory('props')">
+            <app-lucide-icon name="square" [size]="14" />
+            <span>Acessórios</span>
+          </button>
+        </div>
+
+        <!-- Furniture Items Carousel / Grid -->
+        <div class="furniture-gallery">
+          @for (f of currentCategoryItems(); track f.id) {
+            <div 
+              class="furn-card" 
+              [class.selected]="selectedFurniture().id === f.id"
+              (click)="setFurniture(f)"
+              [title]="f.name">
+              <div class="furn-thumb-box">
+                <img 
+                  [src]="getFurnitureImage(f.id, selectedRotation())" 
+                  [alt]="f.name" 
+                  class="furn-thumb-img" />
+              </div>
+              <span class="furn-card-name">{{ f.name }}</span>
+              <span class="furn-size-tag">{{ f.widthTiles }}x{{ f.heightTiles }}</span>
+            </div>
+          }
         </div>
       }
 
-      <!-- Zone Sub-Bar -->
+      <!-- Zone Types Submenu -->
       @if (activeTool() === 'draw_zone') {
-        <div class="palette-subbar">
-          <span class="palette-title">Tipo de Zona:</span>
+        <div class="zones-bar">
+          <span class="zones-bar-title">Tipo de Zona:</span>
           <div class="zone-pills">
             <button class="zone-pill desk" [class.selected]="selectedZoneType() === 'Desk'" (click)="setZoneType('Desk')">
-              🪑 Mesa de Trabalho
+              <app-lucide-icon name="briefcase" [size]="14" />
+              <span>Mesa de Trabalho</span>
             </button>
             <button class="zone-pill room" [class.selected]="selectedZoneType() === 'MeetingRoom'" (click)="setZoneType('MeetingRoom')">
-              🔒 Sala Privada
+              <app-lucide-icon name="lock" [size]="14" />
+              <span>Sala Privada (WebRTC)</span>
             </button>
             <button class="zone-pill spawn" [class.selected]="selectedZoneType() === 'Spawn'" (click)="setZoneType('Spawn')">
-              🚀 Spawn
+              <app-lucide-icon name="map-pin" [size]="14" />
+              <span>Ponto de Entrada</span>
             </button>
             <button class="zone-pill lounge" [class.selected]="selectedZoneType() === 'Lounge'" (click)="setZoneType('Lounge')">
-              ☕ Lounge
+              <app-lucide-icon name="coffee" [size]="14" />
+              <span>Área Lounge</span>
             </button>
           </div>
           <div class="zone-name-input">
             <input type="text" [(ngModel)]="newZoneName" placeholder="Nome da Zona..." />
           </div>
           <span class="help-text">
-            {{ zoneDragStart() ? 'Clique no ponto final para fechar o retângulo' : 'Clique no ponto inicial na grade' }}
+            {{ zoneDragStart() ? 'Clique no segundo ponto do grid para demarcar' : 'Clique no ponto inicial na grade' }}
           </span>
         </div>
       }
@@ -182,11 +265,25 @@
       class="canvas-world" 
       [style.transform]="'translate(' + panX() + 'px, ' + panY() + 'px) scale(' + zoom() + ')'">
       
-      <!-- Grid Background Floor -->
+      <!-- Grid Layer com Textura de Piso WorkAdventure e Click-to-Move -->
       <div 
         class="grid-layer" 
+        [class.edit-grid]="isEditMode()"
         [style.width.px]="(currentMap()?.gridWidth || 100) * 32"
-        [style.height.px]="(currentMap()?.gridHeight || 100) * 32">
+        [style.height.px]="(currentMap()?.gridHeight || 100) * 32"
+        (click)="onFloorClick($event)">
+
+        <!-- Estrutura Arquitetônica e Parede Externa do Edifício -->
+        <div class="office-building-envelope">
+          <div class="building-outer-walls"></div>
+          <div class="building-corridor-runner"></div>
+          <div class="building-entrance-mark">
+            <span class="entrance-tag">
+              <app-lucide-icon name="door-closed" [size]="12" />
+              ENTRADA PRINCIPAL
+            </span>
+          </div>
+        </div>
 
         <!-- Clickable Tiles Layer in Edit Mode -->
         @if (isEditMode()) {
@@ -194,7 +291,22 @@
             class="interactive-grid-clicker"
             [style.width.px]="(currentMap()?.gridWidth || 100) * 32"
             [style.height.px]="(currentMap()?.gridHeight || 100) * 32"
+            (mousemove)="onGridMouseMove($event)"
             (click)="onGridClick($event)">
+          </div>
+        }
+
+        <!-- Ghost Placement Preview (Sob o cursor do mouse no Edit Mode) -->
+        @if (isEditMode() && activeTool() === 'place_furniture' && hoverGridX() !== null && hoverGridY() !== null) {
+          <div 
+            class="ghost-furniture-preview"
+            [style.left.px]="hoverGridX()! * 32"
+            [style.top.px]="hoverGridY()! * 32"
+            [style.width.px]="selectedFurniture().widthTiles * 32"
+            [style.height.px]="selectedFurniture().heightTiles * 32">
+            <img 
+              [src]="getFurnitureImage(selectedFurniture().id, selectedRotation())" 
+              class="ghost-img" />
           </div>
         }
 
@@ -204,14 +316,17 @@
             class="zone-drag-pin"
             [style.left.px]="start.x * 32"
             [style.top.px]="start.y * 32">
-            <span class="pin-badge">📍 Ponto 1 fixado</span>
+            <span class="pin-badge">
+              <app-lucide-icon name="map-pin" [size]="12" />
+              Ponto 1 fixado
+            </span>
           </div>
         }
 
-        <!-- Render Zones -->
+        <!-- Render Zones com texturas e bordas temáticas -->
         @for (zone of draftZones(); track $index) {
           <div 
-            class="zone-box" 
+            class="zone-box zone-type-{{ zone.zoneType.toLowerCase() }}" 
             [attr.data-zone-type]="zone.zoneType"
             [style.left.px]="zone.startX * 32"
             [style.top.px]="zone.startY * 32"
@@ -227,7 +342,8 @@
                   [class.locked]="roomAccessService.isRoomLocked(getZoneId(zone))"
                   (click)="toggleRoomLock(zone, $event)"
                   title="Alternar Tranca da Sala Privada">
-                  {{ roomAccessService.isRoomLocked(getZoneId(zone)) ? '🔒 Trancada' : '🔓 Aberta' }}
+                  <app-lucide-icon [name]="roomAccessService.isRoomLocked(getZoneId(zone)) ? 'lock' : 'unlock'" [size]="12" />
+                  <span>{{ roomAccessService.isRoomLocked(getZoneId(zone)) ? 'Trancada' : 'Aberta' }}</span>
                 </button>
               }
               @if (!isEditMode()) {
@@ -235,7 +351,8 @@
                   class="btn-zone-whiteboard" 
                   (click)="openWhiteboard(zone); $event.stopPropagation()"
                   title="Abrir Quadro Branco da Zona">
-                  🎨 Quadro
+                  <app-lucide-icon name="palette" [size]="12" />
+                  <span>Quadro</span>
                 </button>
               }
             </div>
@@ -246,22 +363,37 @@
           </div>
         }
 
-        <!-- Render Objects / Furniture -->
+        <!-- Click-to-Move Target Reticle Indicator -->
+        @if (targetClickMarker(); as marker) {
+          <div class="target-click-reticle" [style.left.px]="marker.x" [style.top.px]="marker.y">
+            <div class="reticle-pulse"></div>
+            <div class="reticle-center"></div>
+          </div>
+        }
+
+        <!-- Render Objects / Furniture com Assets Reais do WorkAdventure -->
         @for (obj of draftObjects(); track $index) {
           <div 
             class="map-object-node"
+            [class.erase-target]="isEditMode() && activeTool() === 'erase'"
             [style.left.px]="obj.coordX * 32"
             [style.top.px]="obj.coordY * 32"
-            [style.transform]="'rotate(' + obj.rotation + 'deg)'"
+            [style.width.px]="getFurnitureWidth(obj.assetId) * 32"
+            [style.height.px]="getFurnitureHeight(obj.assetId) * 32"
             (click)="removeObject(obj, $event)">
-            <span class="object-icon">{{ getFurnitureIcon(obj.assetId) }}</span>
+            
+            <img 
+              [src]="getFurnitureImage(obj.assetId, obj.rotation)" 
+              [alt]="obj.assetId"
+              class="map-furniture-image" />
+
             @if (isEditMode()) {
-              <span class="remove-hover">✕</span>
+              <span class="remove-hover-badge">✕</span>
             }
           </div>
         }
 
-        <!-- Avatars Layer (US01, US02, US03) -->
+        <!-- Avatars Layer com Sprites Pipoya Reais do WorkAdventure -->
         <!-- Remote Avatars -->
         @for (user of presenceService.remoteUsers(); track user.userId) {
           <div 
@@ -278,14 +410,21 @@
                 <span class="grace-badge">Reconectando...</span>
               }
               @if (user.status === 'focus') {
-                <span class="focus-badge">Foco 🎯</span>
+                <span class="focus-badge">
+                  <app-lucide-icon name="sparkles" [size]="10" />
+                  Foco
+                </span>
               }
             </div>
 
-            <div class="avatar-sprite" [attr.data-direction]="user.direction || 'down'">
-              <div class="avatar-circle">
-                <span class="avatar-glyph">👤</span>
-              </div>
+            <!-- Sprite Pipoya Oficial WorkAdventure -->
+            <div class="avatar-sprite-wrapper">
+              <app-pipoya-sprite 
+                [model]="getUserCharacterModel(user)"
+                [direction]="user.direction || 'down'"
+                [isMoving]="user.isMoving || false"
+                [scale]="1" />
+              <div class="avatar-ground-shadow"></div>
             </div>
           </div>
         }
@@ -302,19 +441,27 @@
               <span class="status-dot" [attr.data-status]="my.status"></span>
               <span class="avatar-name">Você</span>
               @if (my.status === 'focus') {
-                <span class="focus-badge">Foco 🎯</span>
+                <span class="focus-badge">
+                  <app-lucide-icon name="sparkles" [size]="10" />
+                  Foco
+                </span>
               }
             </div>
 
-            <div class="avatar-sprite" [attr.data-direction]="my.direction || 'down'">
-              <div class="avatar-circle local-glow">
-                <span class="avatar-glyph">🧙‍♂️</span>
-              </div>
+            <!-- Sprite Pipoya Oficial WorkAdventure para o Usuário Local -->
+            <div class="avatar-sprite-wrapper">
+              <app-pipoya-sprite 
+                [model]="getMyCharacterModel()"
+                [direction]="my.direction || 'down'"
+                [isMoving]="my.isMoving || false"
+                [scale]="1"
+                [glow]="true" />
+              <div class="avatar-ground-shadow"></div>
             </div>
           </div>
         }
 
-        <!-- Proximity Speech Bubbles (US01) -->
+        <!-- Proximity Speech Bubbles -->
         @for (bubble of chatService.proximityBubbles(); track bubble.id) {
           <div 
             class="proximity-speech-bubble"
@@ -327,100 +474,114 @@
       </div>
     </div>
 
-    <!-- Floating Controls in Normal Mode -->
+    <!-- Floating HUD Gather / WorkAdventure Style -->
     @if (!isEditMode()) {
-      <!-- Floating Proximity Video Dock (US01, US02, US03) -->
+      <!-- Video & Media Dock -->
       <app-proximity-video-dock class="floating-video-dock" />
 
-      <!-- Floating Proximity Chat Bar (US01) -->
-      <div class="proximity-chat-bar">
-        <span class="proximity-bar-icon">🗣️</span>
-        <input 
-          type="text" 
-          [(ngModel)]="proximityInput" 
-          (keydown.enter)="sendProximityChatMessage()" 
-          placeholder="Falar por proximidade no mapa (Enter)..." />
-        <button 
-          class="btn-send-prox" 
-          [disabled]="!proximityInput.trim()" 
-          (click)="sendProximityChatMessage()">
-          Falar
-        </button>
+      <!-- Gather-style Bottom HUD -->
+      <footer class="gather-hud-bar">
+        <!-- Zone & Proximity Status Badge -->
+        <div class="hud-context-pill">
+          <div class="context-item location-item">
+            <app-lucide-icon name="map-pin" [size]="15" extraClass="context-icon" />
+            <span class="context-label">{{ currentActiveZone()?.name || 'Espaço Central' }}</span>
+          </div>
+
+          <div class="context-divider"></div>
+
+          <div class="context-item peers-item" [title]="nearbyPeers().length + ' colegas no raio de proximidade'">
+            <app-lucide-icon name="users" [size]="15" extraClass="context-icon" />
+            <span class="context-label">{{ nearbyPeers().length }} por perto</span>
+          </div>
+
+          @if (currentActiveZone()?.zoneType === 'MeetingRoom') {
+            <div class="context-divider"></div>
+            <div class="context-item room-lock-item">
+              <app-lucide-icon name="lock" [size]="14" extraClass="context-icon" />
+              <span class="context-label">Sala Privada</span>
+            </div>
+          }
+        </div>
+
+        <!-- Proximity Chat Input Box -->
+        <div class="hud-proximity-chat">
+          <app-lucide-icon name="message-square" [size]="16" extraClass="chat-icon" />
+          <input 
+            type="text" 
+            [(ngModel)]="proximityInput" 
+            (keydown.enter)="sendProximityChatMessage()" 
+            placeholder="Falar por proximidade (Enter)..." />
+          <button 
+            class="btn-send-prox" 
+            [disabled]="!proximityInput.trim()" 
+            (click)="sendProximityChatMessage()"
+            title="Enviar mensagem para quem estiver perto">
+            <app-lucide-icon name="send" [size]="14" />
+          </button>
+        </div>
+
+        <!-- Keyboard Controls Helper Hints -->
+        <div class="hud-hotkeys-hint">
+          <span class="hotkey-item"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Mover</span>
+          <span class="hotkey-item"><kbd>Clique</kbd> Andar até</span>
+          <span class="hotkey-item"><kbd>E</kbd> Interagir</span>
+        </div>
+      </footer>
+    }
+
+    <!-- Modal de Pedido de Entrada em Sala Trancada -->
+    @if (roomAccessService.activeKnockPrompt(); as prompt) {
+      <div class="door-knock-modal">
+        <div class="knock-dialog">
+          <div class="knock-icon-badge">
+            <app-lucide-icon name="door-closed" [size]="32" />
+          </div>
+          <h3>Sala Trancada: {{ prompt.zoneName }}</h3>
+          <p>Esta sala está trancada pelos ocupantes. Você deseja bater na porta e solicitar permissão de entrada?</p>
+          <div class="knock-actions">
+            <button class="btn-cancel-knock" (click)="cancelKnock()">Voltar</button>
+            <button class="btn-confirm-knock" (click)="knockOnDoor()">Bater na Porta (Knock)</button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Modal de Importação Tiled JSON -->
+    @if (isTiledModalOpen()) {
+      <div class="tiled-modal-backdrop" (click)="closeTiledModal()">
+        <div class="tiled-dialog" (click)="$event.stopPropagation()">
+          <header class="dialog-header">
+            <h3>Importar Mapa do Tiled JSON</h3>
+            <button class="btn-close" (click)="closeTiledModal()">
+              <app-lucide-icon name="x" [size]="18" />
+            </button>
+          </header>
+          <div class="dialog-body">
+            <p>Cole abaixo o JSON exportado do Tiled Map Editor para sincronizar objetos e zonas:</p>
+            <textarea 
+              [(ngModel)]="tiledJsonInput" 
+              placeholder='{ "layers": [ ... ], "width": 100, "height": 100 }'
+              rows="10">
+            </textarea>
+            @if (tiledError()) {
+              <div class="error-msg">{{ tiledError() }}</div>
+            }
+          </div>
+          <footer class="dialog-footer">
+            <button class="btn-cancel" (click)="closeTiledModal()">Cancelar</button>
+            <button class="btn-confirm" (click)="submitTiledImport()" [disabled]="!tiledJsonInput.trim()">
+              Importar Cenário
+            </button>
+          </footer>
+        </div>
       </div>
     }
   </main>
 
-  <!-- Import Tiled Modal -->
-  @if (isTiledModalOpen()) {
-    <div class="modal-backdrop" (click)="closeTiledModal()">
-      <div class="modal-card" (click)="$event.stopPropagation()">
-        <header class="modal-header">
-          <h3>Importar Mapa do Tiled Map Editor</h3>
-          <button class="btn-close" (click)="closeTiledModal()">✕</button>
-        </header>
-        <div class="modal-body">
-          <p>Cole abaixo o conteúdo JSON exportado do <strong>Tiled Map Editor</strong> (Camadas de colisão, paredes e chão):</p>
-          <textarea 
-            [(ngModel)]="tiledJsonInput" 
-            placeholder='{ "compressionlevel": -1, "height": 100, "infinite": false, "layers": [...] }'
-            rows="10">
-          </textarea>
-          @if (tiledError()) {
-            <span class="error-msg">{{ tiledError() }}</span>
-          }
-        </div>
-        <footer class="modal-footer">
-          <button class="btn-secondary" (click)="closeTiledModal()">Cancelar</button>
-          <button class="btn-primary" (click)="submitTiledImport()">Importar JSON</button>
-        </footer>
-      </div>
-    </div>
-  }
-
-  <!-- Incoming Knocks Alert (US03) -->
-  @if (roomAccessService.incomingKnocks().length > 0) {
-    <div class="knock-alerts-container">
-      @for (knock of roomAccessService.incomingKnocks(); track knock.applicantUserId) {
-        <div class="knock-alert-card">
-          <span class="knock-icon">🚪🔔</span>
-          <div class="knock-text">
-            <strong>{{ knock.applicantName }}</strong> está batendo na porta da sala!
-          </div>
-          <div class="knock-actions">
-            <button class="btn-allow" (click)="roomAccessService.respondKnock(knock.zoneId, knock.applicantUserId, true)">Permitir Entrada</button>
-            <button class="btn-deny" (click)="roomAccessService.respondKnock(knock.zoneId, knock.applicantUserId, false)">Recusar</button>
-          </div>
-        </div>
-      }
-    </div>
-  }
-
-  <!-- Knock on Door Modal (US03) -->
-  @if (roomAccessService.activeKnockPrompt(); as prompt) {
-    <div class="knock-prompt-backdrop">
-      <div class="knock-prompt-modal">
-        <div class="knock-modal-header">
-          <span class="lock-glyph">🔒</span>
-          <h3>Sala Privada Trancada</h3>
-        </div>
-        <p class="knock-modal-desc">
-          A sala <strong>{{ prompt.zoneName }}</strong> está fechada para reunião confidencial. Deseja bater na porta para solicitar permissão de entrada aos participantes?
-        </p>
-        <div class="knock-modal-actions">
-          <button class="btn-knock-confirm" (click)="knockOnDoor()">
-            <span>✊ Bater na Porta</span>
-          </button>
-          <button class="btn-knock-cancel" (click)="cancelKnock()">
-            Voltar
-          </button>
-        </div>
-      </div>
-    </div>
-  }
-
-  <!-- Multichannel Chat Drawer (US02, US03, US04) -->
+  <!-- Gaveta de Chat Multicanal Integrada -->
   <app-chat-drawer />
 
-  <!-- Collaborative Whiteboard Modal (US03, US04) -->
+  <!-- Modal de Quadro Branco Integrado -->
   <app-whiteboard-modal />
 </div>

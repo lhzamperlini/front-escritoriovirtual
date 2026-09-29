@@ -12,8 +12,9 @@ export class WorkspaceContextService {
   public readonly currentWorkspace = computed(() => this._currentWorkspace());
   public readonly activeWorkspaceId = computed(() => this._currentWorkspace()?.id ?? null);
   public readonly isOwnerOrAdmin = computed(() => {
-    const role = this._currentWorkspace()?.userRole;
-    return role === WorkspaceRole.Owner || role === WorkspaceRole.Admin;
+    const role = this._currentWorkspace()?.userRole as any;
+    return role === 'Owner' || role === WorkspaceRole.Owner || role === 1 || 
+           role === 'Admin' || role === WorkspaceRole.Admin || role === 2;
   });
 
   public setWorkspace(workspace: WorkspaceDto): void {

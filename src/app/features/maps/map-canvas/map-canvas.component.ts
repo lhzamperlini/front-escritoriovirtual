@@ -2,7 +2,18 @@ import { Component, ElementRef, OnInit, OnDestroy, ViewChild, inject, signal, co
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MapService } from '../map.service';
-import { MapData, MapObject, MapZone, ZoneType, FURNITURE_CATALOG, FurnitureCatalogItem } from '../map.model';
+import { 
+  MapData, 
+  MapObject, 
+  MapZone, 
+  ZoneType, 
+  FURNITURE_CATALOG, 
+  FurnitureCatalogItem, 
+  FurnitureCategory, 
+  getFurnitureAssetDetails,
+  DEFAULT_OFFICE_ZONES,
+  DEFAULT_OFFICE_OBJECTS
+} from '../map.model';
 import { WorkspaceContextService } from '../../../core/workspace/workspace-context.service';
 import { PresenceService, PresenceState } from '../../../core/presence/presence.service';
 import { AuthService } from '../../../core/auth/auth.service';
@@ -13,13 +24,24 @@ import { ProximityVideoDockComponent } from '../../webrtc/proximity-video-dock/p
 import { RoomAccessService } from '../../../core/rooms/room-access.service';
 import { WhiteboardService } from '../../../core/whiteboard/whiteboard.service';
 import { WhiteboardModalComponent } from '../../whiteboard/whiteboard-modal/whiteboard-modal.component';
+import { PipoyaSpriteComponent } from '../../../shared/components/pipoya-sprite/pipoya-sprite.component';
+import { LucideIconComponent } from '../../../shared/components/lucide-icon/lucide-icon.component';
+import { AvatarService } from '../../avatar/avatar.service';
 
 type EditorTool = 'select' | 'place_furniture' | 'draw_zone' | 'erase';
 
 @Component({
   selector: 'app-map-canvas',
   standalone: true,
-  imports: [CommonModule, FormsModule, ChatDrawerComponent, ProximityVideoDockComponent, WhiteboardModalComponent],
+  imports: [
+    CommonModule, 
+    FormsModule, 
+    ChatDrawerComponent, 
+    ProximityVideoDockComponent, 
+    WhiteboardModalComponent,
+    PipoyaSpriteComponent,
+    LucideIconComponent
+  ],
   templateUrl: './map-canvas.component.html',
   styleUrls: ['./map-canvas.component.scss']
 })
@@ -32,6 +54,7 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
   public readonly webrtcService = inject(WebRtcService);
   public readonly roomAccessService = inject(RoomAccessService);
   public readonly whiteboardService = inject(WhiteboardService);
+  protected readonly avatarService = inject(AvatarService);
 
   @ViewChild('viewport', { static: true }) viewportRef!: ElementRef<HTMLDivElement>;
 
@@ -47,13 +70,29 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
   public isPanning = false;
   private startPanMouseX = 0;
   private startPanMouseY = 0;
+  public wasDraggingPan = false;
 
-  // Editor Tools
+  // Editor Tools & Catálogo WorkAdventure
   public readonly activeTool = signal<EditorTool>('select');
+  public readonly furnitureCatalog = FURNITURE_CATALOG;
+  public readonly activeFurnitureCategory = signal<FurnitureCategory>('desks');
   public readonly selectedFurniture = signal<FurnitureCatalogItem>(FURNITURE_CATALOG[0]);
-  public readonly selectedRotation = signal<number>(0);
+  public readonly selectedRotation = signal<number>(0); // 0 (Down), 90 (Right), 180 (Up), 270 (Left)
   public readonly selectedZoneType = signal<ZoneType>('Desk');
-  public newZoneName = 'Nova Mesa Alpha';
+  public newZoneName = 'Mesa Alpha';
+
+  // Preview dinâmico sob o cursor
+  public readonly hoverGridX = signal<number | null>(null);
+  public readonly hoverGridY = signal<number | null>(null);
+
+  // Click-to-Move
+  public readonly targetClickMarker = signal<{ x: number; y: number } | null>(null);
+  private moveInterval: any = null;
+
+  // Itens da categoria ativa
+  public readonly currentCategoryItems = computed(() => {
+    return this.furnitureCatalog.filter(f => f.category === this.activeFurnitureCategory());
+  });
 
   // Zone drawing temporary state
   public zoneDragStart = signal<{ x: number; y: number } | null>(null);
@@ -63,18 +102,34 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
   public readonly draftZones = signal<MapZone[]>([]);
   public readonly selectedEntity = signal<{ type: 'object' | 'zone'; item: any } | null>(null);
 
+  // Zona ativa atual sob os pés do usuário
+  public readonly currentActiveZone = computed<MapZone | null>(() => {
+    const my = this.presenceService.myPresence();
+    if (!my) return null;
+    const zones = this.draftZones();
+    return zones.find(z => my.gridX >= z.startX && my.gridX < z.endX && my.gridY >= z.startY && my.gridY < z.endY) || null;
+  });
+
+  // Contagem de colegas próximos (raio de 6 tiles)
+  public readonly nearbyPeers = computed<PresenceState[]>(() => {
+    const my = this.presenceService.myPresence();
+    if (!my) return [];
+    return this.presenceService.remoteUsers().filter(r => {
+      const distTiles = Math.hypot(r.gridX - my.gridX, r.gridY - my.gridY);
+      return distTiles <= 6;
+    });
+  });
+
   // Tiled import modal
   public readonly isTiledModalOpen = signal<boolean>(false);
   public tiledJsonInput = '';
   public tiledError = signal<string | null>(null);
 
-  public readonly furnitureCatalog = FURNITURE_CATALOG;
-
   public readonly statusList = [
-    { id: 'available', label: 'Disponível', color: '#10b981', icon: '🟢' },
-    { id: 'focus', label: 'Foco / Não Perturbe', color: '#f59e0b', icon: '🎯' },
-    { id: 'busy', label: 'Ocupado', color: '#ef4444', icon: '🔴' },
-    { id: 'away', label: 'Ausente', color: '#94a3b8', icon: '🌙' }
+    { id: 'available', label: 'Disponível', color: '#10b981', icon: 'check' },
+    { id: 'focus', label: 'Foco / Não Perturbe', color: '#f59e0b', icon: 'sparkles' },
+    { id: 'busy', label: 'Ocupado', color: '#ef4444', icon: 'minus' },
+    { id: 'away', label: 'Ausente', color: '#94a3b8', icon: 'circle' }
   ];
 
   constructor() {
@@ -92,7 +147,11 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
 
   public ngOnInit(): void {
     const user = this.authService.currentUser();
-    const userId = (user?.claims?.['sub'] as string) || (user?.email) || 'my-user';
+    const userId = user?.id 
+      || (user?.claims?.['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] as string)
+      || (user?.claims?.['sub'] as string) 
+      || user?.email 
+      || 'my-user';
     this.presenceService.myUserId.set(userId);
 
     const ws = this.workspaceContext.currentWorkspace();
@@ -101,7 +160,6 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
         if (maps.length > 0) {
           this.loadMapDetails(maps[0].id);
         } else {
-          // Cria o primeiro mapa padrão para o workspace
           this.mapService.createMap(ws.id, 'Sede Virtual 01').subscribe((newMap) => {
             this.setLocalMap(newMap);
           });
@@ -112,6 +170,9 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
 
   public ngOnDestroy(): void {
     this.presenceService.leaveMap();
+    if (this.moveInterval) {
+      clearInterval(this.moveInterval);
+    }
   }
 
   public loadMapDetails(mapId: string): void {
@@ -130,9 +191,19 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
 
   private setLocalMap(map?: MapData | null): void {
     if (!map) return;
-    this.draftObjects.set(JSON.parse(JSON.stringify(map.objects || [])));
-    const rawZones: any[] = JSON.parse(JSON.stringify(map.zones || []));
-    const normalizedZones: MapZone[] = rawZones.map(z => ({
+    let objects = map.objects || [];
+    let zones = map.zones || [];
+
+    // Se o mapa for novo ou for o rascunho de teste antigo, substitui automaticamente pelo Cenário Corporativo Completo
+    const isOldTestLayout = objects.length <= 4 && zones.some(z => z.name?.includes('Ponto de') || z.name?.includes('Alpha') || z.name?.includes('Reunião 1'));
+    if ((objects.length === 0 && zones.length === 0) || isOldTestLayout) {
+      objects = JSON.parse(JSON.stringify(DEFAULT_OFFICE_OBJECTS));
+      zones = JSON.parse(JSON.stringify(DEFAULT_OFFICE_ZONES));
+      this.mapService.saveMapLayout(map.id, objects, zones).subscribe();
+    }
+
+    this.draftObjects.set(JSON.parse(JSON.stringify(objects)));
+    const normalizedZones: MapZone[] = zones.map(z => ({
       ...z,
       zoneType: this.normalizeZoneType(z.zoneType)
     }));
@@ -140,15 +211,56 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
 
     const ws = this.workspaceContext.currentWorkspace();
     if (ws) {
-      this.presenceService.joinMap(ws.id, map.id, 320, 320);
+      // Ponto de spawn inicial na Recepção (grid 5, 5 = pixels 160, 160)
+      this.presenceService.joinMap(ws.id, map.id, 160, 160);
       this.webrtcService.requestToken(ws.id, map.id).subscribe();
     }
+
+    setTimeout(() => this.centerOnOffice(), 150);
+  }
+
+  public applyOfficialCorporatePreset(): void {
+    const map = this.currentMap();
+    if (!map) return;
+    const objects = JSON.parse(JSON.stringify(DEFAULT_OFFICE_OBJECTS));
+    const zones = JSON.parse(JSON.stringify(DEFAULT_OFFICE_ZONES));
+    this.draftObjects.set(objects);
+    const normalizedZones = zones.map((z: any) => ({
+      ...z,
+      zoneType: this.normalizeZoneType(z.zoneType)
+    }));
+    this.draftZones.set(normalizedZones);
+    this.mapService.saveMapLayout(map.id, objects, zones).subscribe({
+      next: (updatedMap) => {
+        this.setLocalMap(updatedMap);
+        this.centerOnOffice();
+      }
+    });
+  }
+
+  public centerOnOffice(): void {
+    if (!this.viewportRef?.nativeElement) return;
+    const rect = this.viewportRef.nativeElement.getBoundingClientRect();
+    const officeCenterX = 16 * 32; // ~512px
+    const officeCenterY = 10 * 32; // ~320px
+    const currentZoom = this.zoom();
+    this.panX.set(Math.round(rect.width / 2 - officeCenterX * currentZoom));
+    this.panY.set(Math.round(rect.height / 2 - officeCenterY * currentZoom));
   }
 
   public setTool(tool: EditorTool): void {
     this.activeTool.set(tool);
     this.selectedEntity.set(null);
     this.zoneDragStart.set(null);
+  }
+
+  public setFurnitureCategory(cat: FurnitureCategory): void {
+    this.activeFurnitureCategory.set(cat);
+    const firstOfCat = this.furnitureCatalog.find(f => f.category === cat);
+    if (firstOfCat) {
+      this.selectedFurniture.set(firstOfCat);
+    }
+    this.activeTool.set('place_furniture');
   }
 
   public setFurniture(item: FurnitureCatalogItem): void {
@@ -165,6 +277,22 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
     this.selectedZoneType.set(type);
     this.newZoneName = type === 'Desk' ? 'Ilha de Trabalho' : type === 'MeetingRoom' ? 'Sala Privada' : type === 'Lounge' ? 'Área Lounge' : 'Ponto de Spawn';
     this.activeTool.set('draw_zone');
+  }
+
+  public onGridMouseMove(event: MouseEvent): void {
+    if (!this.isEditMode()) {
+      this.hoverGridX.set(null);
+      this.hoverGridY.set(null);
+      return;
+    }
+    const target = event.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    const clickX = (event.clientX - rect.left) / this.zoom();
+    const clickY = (event.clientY - rect.top) / this.zoom();
+    const gx = Math.max(0, Math.floor(clickX / 32));
+    const gy = Math.max(0, Math.floor(clickY / 32));
+    this.hoverGridX.set(gx);
+    this.hoverGridY.set(gy);
   }
 
   public onGridClick(event: MouseEvent): void {
@@ -204,7 +332,6 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
         let startY = Math.min(start.y, gridY);
         let endY = Math.max(start.y, gridY) + 1;
 
-        // Se o clique for muito pequeno ou no mesmo tile, expande para o tamanho mínimo utilizável (4x3 tiles)
         if (endX - startX < 2) endX = startX + 4;
         if (endY - startY < 2) endY = startY + 3;
 
@@ -224,6 +351,102 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
 
         this.draftZones.update(list => [...list, newZone]);
         this.zoneDragStart.set(null);
+      }
+    }
+  }
+
+  // --- Click-to-Move Funcional ---
+  public onFloorClick(event: MouseEvent): void {
+    if (this.isEditMode()) return;
+    if (this.wasDraggingPan) {
+      this.wasDraggingPan = false;
+      return;
+    }
+
+    const target = event.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    const clickX = (event.clientX - rect.left) / this.zoom();
+    const clickY = (event.clientY - rect.top) / this.zoom();
+    const targetGridX = Math.max(0, Math.floor(clickX / 32));
+    const targetGridY = Math.max(0, Math.floor(clickY / 32));
+
+    this.moveToGrid(targetGridX, targetGridY);
+  }
+
+  public moveToGrid(targetGridX: number, targetGridY: number): void {
+    const my = this.presenceService.myPresence();
+    if (!my) return;
+
+    if (this.moveInterval) {
+      clearInterval(this.moveInterval);
+      this.moveInterval = null;
+    }
+
+    this.targetClickMarker.set({ x: targetGridX * 32, y: targetGridY * 32 });
+
+    this.moveInterval = setInterval(() => {
+      const current = this.presenceService.myPresence();
+      if (!current) {
+        clearInterval(this.moveInterval);
+        this.targetClickMarker.set(null);
+        return;
+      }
+
+      const diffX = targetGridX - current.gridX;
+      const diffY = targetGridY - current.gridY;
+
+      if (diffX === 0 && diffY === 0) {
+        clearInterval(this.moveInterval);
+        this.moveInterval = null;
+        setTimeout(() => this.targetClickMarker.set(null), 300);
+        return;
+      }
+
+      let stepDx = 0;
+      let stepDy = 0;
+      let dir = 'down';
+
+      if (Math.abs(diffX) >= Math.abs(diffY)) {
+        stepDx = diffX > 0 ? 1 : -1;
+        dir = stepDx > 0 ? 'right' : 'left';
+      } else {
+        stepDy = diffY > 0 ? 1 : -1;
+        dir = stepDy > 0 ? 'down' : 'up';
+      }
+
+      const nextGridX = current.gridX + stepDx;
+      const nextGridY = current.gridY + stepDy;
+
+      // Colisão com sólidos
+      const isBlocked = this.draftObjects().some(o => o.coordX === nextGridX && o.coordY === nextGridY && o.isSolid);
+      if (isBlocked) {
+        clearInterval(this.moveInterval);
+        this.moveInterval = null;
+        this.targetClickMarker.set(null);
+        return;
+      }
+
+      this.stepPlayer(nextGridX, nextGridY, dir);
+    }, 140);
+  }
+
+  public stepPlayer(nextGridX: number, nextGridY: number, direction: string): void {
+    const nextX = nextGridX * 32;
+    const nextY = nextGridY * 32;
+
+    this.presenceService.moveStart(direction);
+    this.presenceService.moveStop(nextX, nextY, nextGridX, nextGridY);
+
+    // Auto-detect zone
+    const targetZone = this.draftZones().find(
+      z => nextGridX >= z.startX && nextGridX < z.endX && nextGridY >= z.startY && nextGridY < z.endY
+    );
+    if (targetZone && (targetZone as any).id) {
+      const ws = this.workspaceContext.currentWorkspace();
+      const map = this.currentMap();
+      if (ws && map) {
+        this.chatService.joinZoneChat(ws.id, (targetZone as any).id, targetZone.name).subscribe();
+        this.webrtcService.requestToken(ws.id, map.id, (targetZone as any).id, targetZone.zoneType).subscribe();
       }
     }
   }
@@ -252,52 +475,64 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
     }));
 
     this.mapService.saveMapLayout(map.id, this.draftObjects(), sanitizedZones).subscribe({
-      next: (updated) => {
-        this.setLocalMap(updated);
-        alert('Layout salvo com sucesso!');
+      next: (updatedMap) => {
+        this.setLocalMap(updatedMap);
+        this.mapService.toggleEditMode();
       },
-      error: () => {
-        alert('Erro ao salvar layout do mapa.');
+      error: (err) => {
+        console.error('Erro ao salvar layout do mapa:', err);
       }
     });
   }
 
   public toggleEdit(): void {
     this.mapService.toggleEditMode();
-    if (!this.isEditMode()) {
-      this.activeTool.set('select');
-      this.selectedEntity.set(null);
+    this.activeTool.set('select');
+    this.zoneDragStart.set(null);
+    this.hoverGridX.set(null);
+    this.hoverGridY.set(null);
+    if (this.moveInterval) {
+      clearInterval(this.moveInterval);
+      this.targetClickMarker.set(null);
     }
   }
 
-  // Zoom controls
+  public changeUserStatus(status: string): void {
+    this.presenceService.setStatus(status);
+  }
+
   public zoomIn(): void {
-    this.zoom.update(z => Math.min(z + 0.2, 2.5));
+    this.zoom.update(z => Math.min(z + 0.25, 2.5));
   }
 
   public zoomOut(): void {
-    this.zoom.update(z => Math.max(z - 0.2, 0.4));
+    this.zoom.update(z => Math.max(z - 0.25, 0.5));
   }
 
   public resetZoom(): void {
     this.zoom.set(1);
-    this.panX.set(0);
-    this.panY.set(0);
+    this.centerOnOffice();
   }
 
-  // Mouse pan handlers
-  public onMouseDown(e: MouseEvent): void {
-    if (e.button === 1 || (e.button === 0 && !this.isEditMode())) {
+  public onMouseDown(event: MouseEvent): void {
+    if (this.isEditMode() && this.activeTool() !== 'select') return;
+    if (event.button === 0 || event.button === 1) {
       this.isPanning = true;
-      this.startPanMouseX = e.clientX - this.panX();
-      this.startPanMouseY = e.clientY - this.panY();
+      this.wasDraggingPan = false;
+      this.startPanMouseX = event.clientX - this.panX();
+      this.startPanMouseY = event.clientY - this.panY();
     }
   }
 
-  public onMouseMove(e: MouseEvent): void {
+  public onMouseMove(event: MouseEvent): void {
     if (this.isPanning) {
-      this.panX.set(e.clientX - this.startPanMouseX);
-      this.panY.set(e.clientY - this.startPanMouseY);
+      const movedX = Math.abs(event.clientX - this.panX() - this.startPanMouseX);
+      const movedY = Math.abs(event.clientY - this.panY() - this.startPanMouseY);
+      if (movedX > 4 || movedY > 4) {
+        this.wasDraggingPan = true;
+      }
+      this.panX.set(event.clientX - this.startPanMouseX);
+      this.panY.set(event.clientY - this.startPanMouseY);
     }
   }
 
@@ -305,9 +540,24 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
     this.isPanning = false;
   }
 
-  public getFurnitureIcon(assetId: string): string {
-    const item = this.furnitureCatalog.find(f => f.id === assetId);
-    return item?.icon || '📦';
+  public getFurnitureImage(assetId: string, rotation: number = 0): string {
+    return getFurnitureAssetDetails(assetId, rotation).imageUrl;
+  }
+
+  public getFurnitureWidth(assetId: string): number {
+    return getFurnitureAssetDetails(assetId).widthTiles;
+  }
+
+  public getFurnitureHeight(assetId: string): number {
+    return getFurnitureAssetDetails(assetId).heightTiles;
+  }
+
+  public getUserCharacterModel(user: PresenceState): string {
+    return user.avatarConfig?.characterModel || 'Male_01-1.png';
+  }
+
+  public getMyCharacterModel(): string {
+    return this.avatarService.currentAvatar().characterModel || 'Male_01-1.png';
   }
 
   public openTiledModal(): void {
@@ -326,35 +576,48 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
 
     try {
       JSON.parse(this.tiledJsonInput);
-    } catch {
-      this.tiledError.set('Formato JSON inválido.');
-      return;
+      this.mapService.importTiled(map.id, this.tiledJsonInput).subscribe({
+        next: (updatedMap: MapData) => {
+          this.setLocalMap(updatedMap);
+          this.closeTiledModal();
+        },
+        error: (err: any) => {
+          this.tiledError.set(err.error?.message || 'Falha ao importar Tiled JSON');
+        }
+      });
+    } catch (e: any) {
+      this.tiledError.set('JSON inválido: ' + e.message);
     }
-
-    this.mapService.importTiled(map.id, this.tiledJsonInput).subscribe({
-      next: (updated) => {
-        this.setLocalMap(updated);
-        this.closeTiledModal();
-        alert('Mapa Tiled importado com sucesso!');
-      },
-      error: () => {
-        this.tiledError.set('Erro ao importar dados do Tiled.');
-      }
-    });
-  }
-
-  public changeUserStatus(status: string): void {
-    this.presenceService.setStatus(status);
   }
 
   @HostListener('window:keydown', ['$event'])
   public onKeyDown(event: KeyboardEvent): void {
-    if (this.isEditMode() || this.isTiledModalOpen()) return;
-
     const target = event.target as HTMLElement;
     if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
       return;
     }
+
+    // Tecla R: rotaciona mobília em modo de construção
+    if (this.isEditMode() && (event.code === 'KeyR' || event.key === 'r' || event.key === 'R')) {
+      this.rotateFurniture();
+      return;
+    }
+
+    // Tecla E ou Espaço: interação com zona / sala atual
+    if (!this.isEditMode() && (event.code === 'KeyE' || event.code === 'Space')) {
+      event.preventDefault();
+      const zone = this.currentActiveZone();
+      if (zone) {
+        if (zone.zoneType === 'MeetingRoom') {
+          this.openWhiteboard(zone);
+        } else {
+          this.chatService.openDrawer();
+        }
+      }
+      return;
+    }
+
+    if (this.isEditMode() || this.isTiledModalOpen()) return;
 
     let dx = 0;
     let dy = 0;
@@ -387,6 +650,13 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
 
     event.preventDefault();
 
+    // Se o usuário usou o teclado, cancela o click-to-move em andamento
+    if (this.moveInterval) {
+      clearInterval(this.moveInterval);
+      this.moveInterval = null;
+      this.targetClickMarker.set(null);
+    }
+
     const myPres = this.presenceService.myPresence();
     if (!myPres) return;
 
@@ -397,7 +667,7 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
     const nextGridX = Math.max(0, Math.min(myPres.gridX + dx, maxX));
     const nextGridY = Math.max(0, Math.min(myPres.gridY + dy, maxY));
 
-    // Collision check against solid objects
+    // Colisão contra móveis sólidos
     const isSolid = this.draftObjects().some(
       o => o.coordX === nextGridX && o.coordY === nextGridY && o.isSolid
     );
@@ -406,7 +676,7 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // US02 / US03 / US04: Checagem de colisão física com sala privada trancada
+    // Bloqueio de porta em sala privada trancada
     const currentZone = this.draftZones().find(
       z => myPres.gridX >= z.startX && myPres.gridX < z.endX && myPres.gridY >= z.startY && myPres.gridY < z.endY
     );
@@ -421,27 +691,12 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
       const canEnter = this.roomAccessService.canEnterRoom(zoneId, isOwnerOrAdmin, myId);
 
       if (!canEnter) {
-        // Bloqueio físico na porta da sala trancada (US02 / US03)
         this.roomAccessService.activeKnockPrompt.set({ zoneId, zoneName: targetZone.name });
         return;
       }
     }
 
-    const nextX = nextGridX * 32;
-    const nextY = nextGridY * 32;
-
-    this.presenceService.moveStart(direction);
-    this.presenceService.moveStop(nextX, nextY, nextGridX, nextGridY);
-
-    // Auto-detect zone entry for contextual zone chat (US02) & WebRTC dedicated room (US01)
-    const enteredZone = targetZone;
-    if (enteredZone && (enteredZone as any).id) {
-      const ws = this.workspaceContext.currentWorkspace();
-      if (ws) {
-        this.chatService.joinZoneChat(ws.id, (enteredZone as any).id, enteredZone.name).subscribe();
-        this.webrtcService.requestToken(ws.id, map!.id, (enteredZone as any).id, enteredZone.zoneType).subscribe();
-      }
-    }
+    this.stepPlayer(nextGridX, nextGridY, direction);
   }
 
   public getZoneId(zone: MapZone): string {
