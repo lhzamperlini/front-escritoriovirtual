@@ -186,14 +186,22 @@ export class MapCanvasComponent implements OnInit, OnDestroy {
       if (!start) {
         this.zoneDragStart.set({ x: gridX, y: gridY });
       } else {
-        const startX = Math.min(start.x, gridX);
-        const endX = Math.max(start.x, gridX) + 1;
-        const startY = Math.min(start.y, gridY);
-        const endY = Math.max(start.y, gridY) + 1;
+        let startX = Math.min(start.x, gridX);
+        let endX = Math.max(start.x, gridX) + 1;
+        let startY = Math.min(start.y, gridY);
+        let endY = Math.max(start.y, gridY) + 1;
+
+        // Se o clique for muito pequeno ou no mesmo tile, expande para o tamanho mínimo utilizável (4x3 tiles)
+        if (endX - startX < 2) endX = startX + 4;
+        if (endY - startY < 2) endY = startY + 3;
+
+        const count = this.draftZones().length + 1;
+        const baseName = this.newZoneName || (this.selectedZoneType() === 'Desk' ? 'Ilha de Trabalho' : 'Sala');
+        const uniqueName = `${baseName} ${count}`;
 
         const newZone: MapZone = {
           zoneType: this.selectedZoneType(),
-          name: this.newZoneName,
+          name: uniqueName,
           startX,
           startY,
           endX,

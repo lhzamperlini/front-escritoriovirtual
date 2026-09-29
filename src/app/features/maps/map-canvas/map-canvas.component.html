@@ -198,6 +198,16 @@
           </div>
         }
 
+        <!-- Zone Drawing Pin / Preview (Edit Mode) -->
+        @if (zoneDragStart(); as start) {
+          <div 
+            class="zone-drag-pin"
+            [style.left.px]="start.x * 32"
+            [style.top.px]="start.y * 32">
+            <span class="pin-badge">📍 Ponto 1 fixado</span>
+          </div>
+        }
+
         <!-- Render Zones -->
         @for (zone of draftZones(); track $index) {
           <div 
@@ -211,7 +221,7 @@
             <div class="zone-badge">
               <span class="zone-tag">{{ zone.zoneType }}</span>
               <span class="zone-label">{{ zone.name }}</span>
-              @if (zone.zoneType === 'MeetingRoom') {
+              @if (!isEditMode() && zone.zoneType === 'MeetingRoom') {
                 <button 
                   class="btn-room-lock" 
                   [class.locked]="roomAccessService.isRoomLocked(getZoneId(zone))"
@@ -220,12 +230,14 @@
                   {{ roomAccessService.isRoomLocked(getZoneId(zone)) ? '🔒 Trancada' : '🔓 Aberta' }}
                 </button>
               }
-              <button 
-                class="btn-zone-whiteboard" 
-                (click)="openWhiteboard(zone); $event.stopPropagation()"
-                title="Abrir Quadro Branco da Zona">
-                🎨 Quadro
-              </button>
+              @if (!isEditMode()) {
+                <button 
+                  class="btn-zone-whiteboard" 
+                  (click)="openWhiteboard(zone); $event.stopPropagation()"
+                  title="Abrir Quadro Branco da Zona">
+                  🎨 Quadro
+                </button>
+              }
             </div>
 
             @if (isEditMode()) {
@@ -315,24 +327,27 @@
       </div>
     </div>
 
-    <!-- Floating Proximity Video Dock (US01, US02, US03) -->
-    <app-proximity-video-dock class="floating-video-dock" />
+    <!-- Floating Controls in Normal Mode -->
+    @if (!isEditMode()) {
+      <!-- Floating Proximity Video Dock (US01, US02, US03) -->
+      <app-proximity-video-dock class="floating-video-dock" />
 
-    <!-- Floating Proximity Chat Bar (US01) -->
-    <div class="proximity-chat-bar">
-      <span class="proximity-bar-icon">🗣️</span>
-      <input 
-        type="text" 
-        [(ngModel)]="proximityInput" 
-        (keydown.enter)="sendProximityChatMessage()" 
-        placeholder="Falar por proximidade no mapa (Enter)..." />
-      <button 
-        class="btn-send-prox" 
-        [disabled]="!proximityInput.trim()" 
-        (click)="sendProximityChatMessage()">
-        Falar
-      </button>
-    </div>
+      <!-- Floating Proximity Chat Bar (US01) -->
+      <div class="proximity-chat-bar">
+        <span class="proximity-bar-icon">🗣️</span>
+        <input 
+          type="text" 
+          [(ngModel)]="proximityInput" 
+          (keydown.enter)="sendProximityChatMessage()" 
+          placeholder="Falar por proximidade no mapa (Enter)..." />
+        <button 
+          class="btn-send-prox" 
+          [disabled]="!proximityInput.trim()" 
+          (click)="sendProximityChatMessage()">
+          Falar
+        </button>
+      </div>
+    }
   </main>
 
   <!-- Import Tiled Modal -->

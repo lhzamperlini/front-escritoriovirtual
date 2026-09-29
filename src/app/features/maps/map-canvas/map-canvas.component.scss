@@ -348,27 +348,62 @@
 }
 
 /* Zones */
+.zone-drag-pin {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  background: rgba(59, 130, 246, 0.35);
+  border: 2px dashed #60a5fa;
+  border-radius: 6px;
+  z-index: 15;
+  pointer-events: none;
+  animation: pulsePin 1.2s infinite ease-in-out;
+
+  .pin-badge {
+    position: absolute;
+    bottom: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e3a8a;
+    color: #93c5fd;
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(147, 197, 253, 0.3);
+  }
+}
+
+@keyframes pulsePin {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.5); }
+  50% { transform: scale(1.08); box-shadow: 0 0 10px 4px rgba(96, 165, 250, 0.3); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.5); }
+}
+
 .zone-box {
   position: absolute;
-  border-radius: 6px;
+  border-radius: 8px;
   z-index: 2;
   transition: all 0.2s ease;
   pointer-events: auto;
+  box-sizing: border-box;
 
   &[data-zone-type="Desk"] {
-    background: rgba(16, 185, 129, 0.15);
+    background: rgba(16, 185, 129, 0.12);
     border: 2px dashed #10b981;
     .zone-tag { background: #10b981; color: white; }
   }
 
   &[data-zone-type="MeetingRoom"] {
-    background: rgba(139, 92, 246, 0.18);
+    background: rgba(139, 92, 246, 0.15);
     border: 2px solid #8b5cf6;
     .zone-tag { background: #8b5cf6; color: white; }
   }
 
   &[data-zone-type="Spawn"] {
-    background: rgba(245, 158, 11, 0.15);
+    background: rgba(245, 158, 11, 0.12);
     border: 2px dashed #f59e0b;
     .zone-tag { background: #f59e0b; color: #1e1e1e; }
   }
@@ -383,9 +418,13 @@
     position: absolute;
     top: 6px;
     left: 6px;
-    display: flex;
+    display: inline-flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 6px;
+    max-width: calc(100% - 32px);
+    z-index: 3;
+    pointer-events: auto;
 
     .zone-tag {
       font-size: 0.65rem;
@@ -393,13 +432,20 @@
       padding: 2px 6px;
       border-radius: 4px;
       text-transform: uppercase;
+      letter-spacing: 0.5px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      flex-shrink: 0;
     }
 
     .zone-label {
-      font-size: 0.72rem;
+      font-size: 0.75rem;
       font-weight: 600;
       color: #f1f5f9;
-      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 140px;
     }
   }
 
@@ -407,20 +453,25 @@
     position: absolute;
     top: 6px;
     right: 6px;
-    background: rgba(239, 68, 68, 0.8);
-    border: none;
+    background: rgba(239, 68, 68, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     color: white;
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
     cursor: pointer;
-    font-size: 0.7rem;
+    font-size: 0.75rem;
+    font-weight: bold;
     display: flex;
     align-items: center;
     justify-content: center;
+    z-index: 5;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    transition: transform 0.15s ease, background 0.15s ease;
 
     &:hover {
       background: #dc2626;
+      transform: scale(1.15);
     }
   }
 }
